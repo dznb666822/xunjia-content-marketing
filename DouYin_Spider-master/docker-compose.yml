@@ -1,0 +1,90 @@
+# ---------------------------------------------------------------------------
+# 抖音内容运营一体化平台 —— 容器编排
+#
+# 说明：原仓库只提供了单容器 Dockerfile（无 docker-compose.yml），
+# 本文件为现场补充编写，按项目 README 与 Dockerfile 的约定编排：
+#   mysql : 数据持久化（README 默认存储后端为 MySQL）
+#   app   : Flask Web 控制台（构建自仓库根目录的 Dockerfile，端口 5000）
+#
+# 用法：
+#   docker compose up -d --build      # 构建并后台启动
+#   docker compose logs -f app        # 查看应用日志
+#   docker compose down               # 停止（数据卷保留）
+#   docker compose down -v            # 停止并清空数据
+# ---------------------------------------------------------------------------
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: xunjia-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass_2026
+      MYSQL_DATABASE: douyin_spider
+      MYSQL_USER: douyin
+      MYSQL_PASSWORD: douyin_pass_2026
+      TZ: Asia/Shanghai
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 宿主机 3306 已被本机 MySQL 占用，这里映射到 3308
+      - "3308:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -proot_pass_2026 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    networks:
+      - xunjia-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # 国内网络可改为 https://pypi.tuna.tsinghua.edu.cn/simple 加速依赖下载
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    container_name: xunjia-web
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # 覆盖 .env 中与编排相关的地址，容器内通过服务名访问 MySQL
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      STORAGE_BACKEND: mysql
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: "5000"
+      TZ: Asia/Shanghai
+      # Smart-Clip MCP 服务地址（走 host.docker.internal 绕开跨网络限制）
+      SMART_CLIP_MCP_URL: http://host.docker.internal:8000
+      # CosyVoice TTS 服务地址（同上，未启动时不影响 web 主服务）
+      COSYVOICE_URL: http://host.docker.internal:50000
+    extra_hosts:
+      # Docker Desktop for Windows 自带 host.docker.internal 别名，显式声明以防万一
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5000:5000"
+    volumes:
+      # 采集媒体与导出文件持久化
+      - app-datas:/app/datas
+      - app-output:/app/output
+    networks:
+      - xunjia-net
+
+volumes:
+  mysql-data:
+  app-datas:
+  app-output:
+
+networks:
+  xunjia-net:
+    driver: bridge

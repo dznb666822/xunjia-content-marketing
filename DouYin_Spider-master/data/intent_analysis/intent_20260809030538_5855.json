@@ -1,0 +1,1086 @@
+{
+  "task_id": "intent_20260809030538_5855",
+  "work_url": "https://www.douyin.com/video/7666746888067443899?previous_page=web_code_link",
+  "video_title": "为什么小狗从不打扰主人睡觉？ #萌宠 #狗 #萌宠出道计划 #萌宠日常记录 #科普",
+  "analyzed_at": "2026-08-09T03:09:15.769729",
+  "total": 119,
+  "summary": {
+    "high": 0,
+    "mid": 2,
+    "low": 3,
+    "none": 114
+  },
+  "results": [
+    {
+      "index": 1,
+      "user": "小刘嘎嘎帅",
+      "comment": "@抖音求真",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅@其他账号，无和宠物购买相关的有效内容",
+      "key_points": []
+    },
+    {
+      "index": 2,
+      "user": "小神男",
+      "comment": "？",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发送疑问符号，无有效相关内容",
+      "key_points": []
+    },
+    {
+      "index": 3,
+      "user": "洛轩花",
+      "comment": "。。。它把我拱醒。。。",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗拱醒自己的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 4,
+      "user": "十五琴",
+      "comment": "假的[流泪][流泪][流泪]我放假在家睡懒觉 我妈喊我起床吃饭就让我家狗跳上床就踩我[流泪][流泪][流泪][流泪]它特别听话给我踩醒",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗被指使踩醒自己的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 5,
+      "user": "粘锅煎鸡蛋",
+      "comment": "第一个是什么品种的狗",
+      "intent_level": "低",
+      "intent_type": "",
+      "reason": "询问视频中出现的狗的品种，属于相关围观提问，无明确购买意向",
+      "key_points": []
+    },
+    {
+      "index": 6,
+      "user": "观影板",
+      "comment": "半夜上厕所我傻狗四仰八叉躺着睡觉肚子还露着",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗睡觉的日常状态，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 7,
+      "user": "༺ཌ༈KIND༈ད༻",
+      "comment": "邪恶的小泰迪大半夜在我肚子上玩蹦蹦床",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家泰迪半夜闹腾的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 8,
+      "user": "落日船🛶",
+      "comment": "不一定，我还没睡醒她就坐我脸上了[泪奔]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗坐脸叫醒自己的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 9,
+      "user": "用户0619",
+      "comment": "。。。守护者吗，谁家守护者在我睡觉时候不是吓唬我就是拿我身体当跳板，简直魔丸",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗睡觉时闹腾的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 10,
+      "user": "啾啾不高兴",
+      "comment": "其实完全打扰我！！但那一定是我睡眠太浅的原因！！",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗打扰自己睡觉的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 11,
+      "user": "无聊之人",
+      "comment": "如果是哈士奇呢[微笑]",
+      "intent_level": "低",
+      "intent_type": "",
+      "reason": "询问哈士奇是否会打扰主人睡觉，属于相关围观提问，无明确购买意向",
+      "key_points": []
+    },
+    {
+      "index": 12,
+      "user": "奥",
+      "comment": "为啥我睡觉的时候我们家狗在拆家？[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗趁自己睡觉拆家的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 13,
+      "user": "泡泡大王",
+      "comment": "我家狗才5点就要叫醒我[微笑][感谢]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗早五点叫醒自己的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 14,
+      "user": "迷侯桃米稀💫",
+      "comment": "谁说不打扰，虽然它已经走了快十年了，但我还记得当时每天早上准时敲我的门，我不理就邦邦邦一直敲",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "怀念已去世的狗曾经叫醒自己的过往，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 15,
+      "user": "小鸟波利",
+      "comment": "@无非 木木怎么打扰你….",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "@好友询问对方家狗的情况，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 16,
+      "user": "挣钱充Vip",
+      "comment": "它比我醒的早，它醒来就抬头乱看，一看我醒了就舔我脸，我要是不想起来，它就继续卧着发呆[杀马特][杀马特][杀马特]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗醒后的乖巧表现，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 17,
+      "user": "Day.",
+      "comment": "为啥我一睡着我家狗就过来咬我脑袋  舔我脸",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗在自己睡着后舔脸咬脑袋的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 18,
+      "user": "一只煎饼狗子",
+      "comment": "[宕机]我的狗子睡得比我还香",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗睡得比自己香的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 19,
+      "user": "靳越博",
+      "comment": "我哥家狗在床上跑酷一脚踩我肚子上了边牧真有劲啊[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享边牧在床上跑酷踩自己的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 20,
+      "user": "不吃鱼",
+      "comment": "@安茸 我真的特别想养一只狗[泣不成声]",
+      "intent_level": "中",
+      "intent_type": "",
+      "reason": "明确表达自己特别想养一只狗，有入手意向",
+      "key_points": []
+    },
+    {
+      "index": 21,
+      "user": "alllllllice",
+      "comment": "世界不能没有小狗！",
+      "intent_level": "低",
+      "intent_type": "",
+      "reason": "表达对小狗的喜爱，属于一般好评类，无明确购买意向",
+      "key_points": []
+    },
+    {
+      "index": 22,
+      "user": "小邹同学👩‍🎓",
+      "comment": "打扰的，每天早上9点开始哼，一直哼，然后直到把你叫醒",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗每天哼着叫醒自己的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 23,
+      "user": "小曾不假",
+      "comment": "我起了她还没起[微笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗比自己起得晚的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 24,
+      "user": ".ZL",
+      "comment": "哦，不，睡得比我还沉[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗睡得比自己沉的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 25,
+      "user": "果果大王",
+      "comment": "人 你起来啦",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "内容表意不明，无和购买相关的有效内容",
+      "key_points": []
+    },
+    {
+      "index": 1,
+      "user": "🌼烫烫想去远方🌓",
+      "comment": "守护我？他呼噜大的给我吵醒了",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗呼噜吵到自己的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 2,
+      "user": "隐喻",
+      "comment": "我家的每天七点准时叫 [流泪]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗准点叫起床的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 3,
+      "user": "六六",
+      "comment": "每天夜里马蹄哒哒哒，喝水哗哗哗",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗夜里动静大的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 4,
+      "user": "燃尽无痕",
+      "comment": "可是萨摩耶雪花不是这样的呀",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅提及萨摩耶不符合视频描述，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 5,
+      "user": "玫瑰与诗",
+      "comment": "@",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅@他人无实质有效内容，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 6,
+      "user": "七月呀",
+      "comment": "[泪奔]它睡我头上 它妈妈睡我怀里  到底谁是守护者",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗陪睡的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 7,
+      "user": "是谁在这多管闲事",
+      "comment": "不可能 我睡着了他tm就舔我脸",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗睡着后舔脸的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 8,
+      "user": "JJ",
+      "comment": "会吗 @一大口蛋挞",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅@他人并提出疑问，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 9,
+      "user": "G.L",
+      "comment": "@Wal 一大早嘤嘤嘤叫醒我",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅@他人分享自家狗叫醒自己的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 10,
+      "user": "睡不着(流浪版)",
+      "comment": "哦，我就说呢，为啥我醒来的时候他不拆家，我一睡觉的时候他疯狂拆…",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗趁自己睡觉拆家的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 11,
+      "user": "芷鱼",
+      "comment": "我躺那玩手机的时候，我家狗就趴我肚子上睡\n然后我侧躺着睡觉，它就跟我背对背靠着[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗陪自己睡觉的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 12,
+      "user": "小同志",
+      "comment": "醒来就看到萌萌的它",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅感慨醒来能看到狗，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 13,
+      "user": "昕昕",
+      "comment": "打扰",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发布单个词汇无实质购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 14,
+      "user": "爱宠儿陪伴日常",
+      "comment": "太懂事了",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅感慨狗懂事，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 15,
+      "user": "团",
+      "comment": "我的眼前只有我的狗在撕咬我的拖鞋[绝望的凝视]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗咬拖鞋的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 16,
+      "user": "🇨🇳十夫长",
+      "comment": "[抠鼻][抠鼻][抠鼻]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发布表情无实质购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 17,
+      "user": "。。7",
+      "comment": "凌晨三点吵到凌晨五点[微笑][微笑][微笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗凌晨吵闹的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 18,
+      "user": "用户355 635680 9742",
+      "comment": "一睁眼看到她好懵逼的坐在我床尾",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗坐在床尾的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 19,
+      "user": "夏。Z",
+      "comment": "打扰到我了[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅表示自家狗打扰自己，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 20,
+      "user": "柠檬J芒果",
+      "comment": "我家狗直接一个雷霆大跳压到我身上，差点没给我弄死[黑脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗跳自己身上的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 21,
+      "user": "r",
+      "comment": "@阳朔安 看我多乖宝宝 要表扬",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅@他人求表扬，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 22,
+      "user": "鹤井野川（不签t）",
+      "comment": "@黑龙江中介（幽零） 你家的为什么会给我一个雷霆大踩",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅@他人吐槽被狗踩，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 23,
+      "user": "🇲  🇪 🇹 🇪 🇴 🇷",
+      "comment": "每天睡醒就会看到这个样子",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享睡醒看到狗的日常，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 24,
+      "user": "放炮",
+      "comment": "为什么我睡觉的时候我家狗就一个雷霆大跳跳我肚子上？",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅疑问自家狗睡觉跳自己肚子的情况，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 25,
+      "user": "欣.",
+      "comment": "哒哒哒，咕咚咕咚，嘘嘘",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅描述狗发出的动静，未提及任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 1,
+      "user": "（ye'la）ok~",
+      "comment": "经常醒来被一个狗头吓到，，就那样把头搭在床边看着我[偷笑]，自从养了老二才改变了，醒了她们两个会自己去客厅打打闹闹",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗狗的相处日常，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 2,
+      "user": "Gina.",
+      "comment": "得 就我被我家狗睡觉打呼噜吵醒了吗[尬笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗睡觉打呼噜的日常，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 3,
+      "user": "han",
+      "comment": "我起来的时候十二点了它还在睡觉[黑脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗睡眠相关日常，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 4,
+      "user": "姜老师.",
+      "comment": "我家狗大嘴巴子抽我[微笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享和自家狗狗的相处日常，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 5,
+      "user": "大橙子🍊",
+      "comment": "狗狗是智能手环",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "对狗狗做出趣味评价，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 6,
+      "user": "芝士小羊",
+      "comment": "比我睡的香多了[憨笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗睡眠情况，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 7,
+      "user": "♪ Kirin",
+      "comment": "假的，他睡醒了以后蹦在床上，在我身上踩来踩去[流泪]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗睡醒后的行为，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 8,
+      "user": "禾风",
+      "comment": "这个世界不能没有小狗",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "表达对小狗的喜爱，无明确购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 9,
+      "user": "ii3",
+      "comment": "@青苹果 我一醒来多多一个雷霆大跳把我脸上的眼屎口水和油一并舔走[比心]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗的趣事，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 10,
+      "user": "♥唱着调调哼着歌.",
+      "comment": "不！它经常打扰我睡觉，在门口哼哼唧唧",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗打扰自己睡觉的经历，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 11,
+      "user": "关于她",
+      "comment": "失眠了半夜好不容易睡着了，一扭头手背湿湿的。我寻思啥呢给我弄醒了，一睁眼一个雷霆大狗脸就这么看着我。硬是给我吓醒了[赞]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享被自家狗狗吓醒的经历，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 12,
+      "user": "嗯。",
+      "comment": "不打扰吗？每次睡着了，要不是我及时醒来，他差点就拿他那双大脚戳我肚子上了[微笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗打扰自己睡觉的经历，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 13,
+      "user": "岑小鱼儿（跪求亲签）",
+      "comment": "那我之前被我姨家的狗吵醒算什么[摊手][摊手]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享被亲戚家狗狗吵醒的经历，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 14,
+      "user": ".呱唧呱唧.",
+      "comment": "它会[微笑][微笑][微笑][微笑][微笑]每天三点把老子叫起来[微笑][微笑][微笑][微笑][微笑][微笑][微笑]气死我了 而且不上厕所也不喝水",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗半夜叫醒自己的经历，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 15,
+      "user": "青提.",
+      "comment": "[举手]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发表情，无有效购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 16,
+      "user": "乖乖萌宠9713",
+      "comment": "确实如此，早上如果你睡得香香的，它就算饿也不来吵你，但是你醒了，故意装睡，它马上来吵[捂脸][捂脸][捂脸][捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗叫醒主人的规律，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 17,
+      "user": "该用户的心已被冻结",
+      "comment": "这个吗[黑脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发表疑问和表情，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 18,
+      "user": "还开心吗_",
+      "comment": "@喝牛奶的孙某某 ？不打扰吗。。它他妈昨天晚上叫了两声给我吓死了",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享被自家狗狗吓到的经历，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 19,
+      "user": "火鸡面",
+      "comment": "我家狗会在我醒的时候跳床上和我一起睡",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享和自家狗狗的相处日常，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 20,
+      "user": "张居正是在下",
+      "comment": "真的吗，我的狗在我睡觉的时候，在我脑袋上蹦[杀马特][杀马特][杀马特]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗打扰自己睡觉的经历，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 21,
+      "user": "茉莉雨🌧️",
+      "comment": "谁给我寄一只狗狗过来试试真假[泣不成声]",
+      "intent_level": "中",
+      "intent_type": "",
+      "reason": "表示想要一只狗狗验证视频说法，有潜在入手意向",
+      "key_points": []
+    },
+    {
+      "index": 22,
+      "user": "Le_ei",
+      "comment": "我家狗今天在我睡觉的时候在床上跳来跳去[微笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗打扰自己睡觉的经历，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 23,
+      "user": "霧潵溡渢",
+      "comment": "半夜一睁眼发现它在我床上坐着伸着头看我，吓死了都",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享被自家狗狗吓到的经历，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 24,
+      "user": "Sunset Shimmer",
+      "comment": "想起了一位临晨把自家狗子叫起来吃宵夜的故人[憨笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "提及和狗狗相关的过往回忆，无购买相关诉求",
+      "key_points": []
+    },
+    {
+      "index": 25,
+      "user": "了了（liao）",
+      "comment": "",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "无有效评论内容，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 1,
+      "user": "可爱🐱",
+      "comment": "为啥我家狗我在睡觉的时候他在睡觉，我不在睡觉的时候他也在睡觉。[泣不成声]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗日常作息，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 2,
+      "user": "大海是个残酷的情人，可我偏偏却找了他的道",
+      "comment": "不是真的是这样吗？我们养的狗，每天早上都会挨个挨个把我们舔醒[憨笑][憨笑][憨笑]。",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗早上舔醒自己的养宠日常，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 3,
+      "user": "西瓜鱼",
+      "comment": "每次早上睡醒了都不敢动，被察觉到就会开始嘤嘤嘤了",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗睡醒后的反应，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 4,
+      "user": "女孩你好呆、",
+      "comment": "那为啥我睡觉的时候 我家傻狗一直叫唤",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗狗睡觉时候叫唤，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 5,
+      "user": "星海",
+      "comment": "每天睁开眼的第一幅画面",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "提及睡醒后的日常画面，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 6,
+      "user": "04895",
+      "comment": "@25455 假的，王安安只会舔我或者给我一脚",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "和好友互动分享自家宠物的日常行为，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 7,
+      "user": "。",
+      "comment": "也是不能发视频 不然给你们看看我家狗子说梦话",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "提及自家狗子说梦话的趣事，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 8,
+      "user": "小椰",
+      "comment": "他早上会突然大叫[憨笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗早上大叫的情况，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 9,
+      "user": "Xioyshi",
+      "comment": "狗睡的比我死",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "调侃自家狗狗睡得沉，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 10,
+      "user": "🚒京腔儿戴爺🇨🇳",
+      "comment": "确定不打扰吗？它每天早上5点多挠门",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗狗早上挠门打扰睡觉，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 11,
+      "user": "甜柚子🍊",
+      "comment": "打扰的，打扰的[苦涩]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "表示自家狗狗会打扰睡觉，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 12,
+      "user": "玩世不恭の混子",
+      "comment": "拉倒吧，凌晨4点就从自己窝里爬起来，抖落抖落毛，就跑到我妈和我爸睡觉的床尾去了。一屁股坐在那里，要是看他俩还没醒，就再趴一会儿。要是还没醒就开始哼唧，要是还没动静就开始舔我妈，意思就是我要出去玩，别睡了，对，凌晨4点，现在已经出去40分钟了[我想静静][我想静静][我想静静]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗凌晨叫人起床遛弯的日常，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 13,
+      "user": "✨蜡笔小张✨",
+      "comment": "@✨嗷瑶瑶✨ 那小黑打扰我睡觉算什么  睡着了还得陪他玩玩具",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "和好友互动吐槽自家狗狗打扰睡觉，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 14,
+      "user": "小寒",
+      "comment": "不可能，因为我之前补觉的时候，他直接咬我头发，然后还踩我脸，在我床上蹦迪。",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗狗补觉时闹腾的行为，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 15,
+      "user": "proloong",
+      "comment": "@🐱 难怪我装睡会被发现",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "和好友互动感慨装睡会被狗发现，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 16,
+      "user": "气气就是气气咯",
+      "comment": "不 它睡的比我还香[看]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "调侃自家狗狗睡得比自己香，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 17,
+      "user": "树萌饲养员",
+      "comment": "@A大锅卤菜培训 @heee🐡 毛毛这时候会选择刨沙发",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "和好友互动提及自家狗狗刨沙发的行为，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 18,
+      "user": "用户5072772052013",
+      "comment": "我醒的时候我家傻狗还在睡[黑脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "分享自家狗狗醒得比自己晚的日常，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 19,
+      "user": "Doré",
+      "comment": "他鬼鬼祟祟的凑过来闻我鼻子是为什么啊？看我还有没有呼吸？？？",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "询问狗狗凑过来闻鼻子的原因，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 20,
+      "user": "💰💰",
+      "comment": "Nonono，俺家的老是嘤嘤叫，要不就像摩托车，呜呜呜的，大早上就喊你[流泪]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗狗早上嘤嘤叫喊人，未涉及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 21,
+      "user": "纯情性感五花肉",
+      "comment": "不打扰我吗[泣不成声]，为啥每次我睡觉的时候，他就一个雷霆大跳跳到我身上，然后还要附加一个翻滚动作从我身上翻过去[泣不成声]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗狗睡觉时候跳到自己身上，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 22,
+      "user": "iif.-.",
+      "comment": "@՞˶･֊･˶՞ಣ 乐乐这个乐乐，大晚上吵醒我了！",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "和好友互动吐槽自家狗大晚上吵醒自己，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 23,
+      "user": "世間唯獨我為神",
+      "comment": "为啥 我家那个死狗天天早上给我叫起来让我带他出去拉屎 我一般都是熬到早上四五点 他6:30就叫我起来[绝望的凝视]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗早上叫自己起床遛弯，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 24,
+      "user": "小酌听雨🌈",
+      "comment": "我睡觉的时候我的狗：他睡着了，我要小声一点。\n我的猫：他是不是嘎了？我去给他一嘴巴看看。[懵]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "调侃对比自家猫狗睡觉时的不同反应，未涉及购买需求",
+      "key_points": []
+    },
+    {
+      "index": 25,
+      "user": "雾瑶",
+      "comment": "我家狗晚上起来哒哒哒的走 喝水 再吧唧嘴 再刨窝 最后长叹一口气 又会一直换位置 吵死了[微笑]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "吐槽自家狗晚上活动动静大吵人，未涉及购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 1,
+      "user": "包包不是包",
+      "comment": "我不想起床..我妈就把狗放进来",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享被狗叫起床的日常经历，无任何购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 2,
+      "user": "幸运星",
+      "comment": "可爱",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅夸赞内容可爱，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 3,
+      "user": "茶邻",
+      "comment": "猫咪跟有病一样，大半夜的不睡觉。所以我更喜欢狗",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅表达对狗的偏好，未提及任何购买相关需求",
+      "key_points": []
+    },
+    {
+      "index": 4,
+      "user": "辰A",
+      "comment": "我家小可爱半夜跳来跳去不睡觉，我睡着了还会把我蹭醒让我摸摸它才老实，白天我在那边听课它就睡觉，很可爱",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家宠物的日常情况，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 5,
+      "user": "奶油果果🐶",
+      "comment": "可爰",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅夸赞可爱，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 6,
+      "user": "爸爸",
+      "comment": "我特么经常睡着的时候被我家狗舔脚舔醒",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享被自家狗舔醒的日常，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 7,
+      "user": "奶糕是只猫",
+      "comment": "真的是这样的[比心][比心][比心][比心][比心][比心][比心][比心][比心]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅表达对视频内容的认同，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 8,
+      "user": "四小只萌语",
+      "comment": "哦，原来狗狗才是人类最忠实的伙伴。",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅表达对狗的好感，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 9,
+      "user": "不是馒头是花卷",
+      "comment": "[赞]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发送点赞表情，无任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 10,
+      "user": "穿黑丝勾引68岁富婆",
+      "comment": "要是是比格呢[黑脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅询问比格犬的相关情况，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 11,
+      "user": "樊禹.",
+      "comment": "我家狗一到早上就跟疯了叫我起床，烦死了",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅吐槽自家狗叫自己起床的日常，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 12,
+      "user": "祁修缘",
+      "comment": "为什么我家的老是踩我[热化了]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗踩自己的日常，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 13,
+      "user": "君.",
+      "comment": "[九转大肠]现在它睡的比我还香",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅提及自家狗的睡眠状态，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 14,
+      "user": "雪球是小狗",
+      "comment": "看完心里软软的，毛孩子的爱总是沉默又真诚[赞][赞]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅感慨毛孩子的爱很真诚，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 15,
+      "user": "特价团购套餐",
+      "comment": "房间门不能关，关了就会在门口叫，没关它看见我还在睡觉就不会打扰我[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家狗的作息习惯，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 16,
+      "user": "青青草原",
+      "comment": "之前没有小的时候，黄的一早上，上楼看我很多次看我，然后下楼，有小的了我就把楼梯装了一个栏，小的上楼会叫[呲牙]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅分享自家养狗的日常经历，无购买相关表述",
+      "key_points": []
+    },
+    {
+      "index": 17,
+      "user": "不爱讲话的小孩👻",
+      "comment": "[二哈]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅发送二哈相关表情，无任何购买相关内容",
+      "key_points": []
+    },
+    {
+      "index": 18,
+      "user": "e…",
+      "comment": "为什么我家狗狗在我睡觉的时候咬我脚[垃圾]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅吐槽自家狗咬自己脚的行为，无购买相关意向",
+      "key_points": []
+    },
+    {
+      "index": 19,
+      "user": "宠缘",
+      "comment": "想成为你的粉丝[捂脸]",
+      "intent_level": "无",
+      "intent_type": "",
+      "reason": "仅表达想成为账号粉丝的意愿，无购买相关表述",
+      "key_points": []
+    }
+  ]
+}

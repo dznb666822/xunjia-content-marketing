@@ -1,0 +1,48 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    # Tests mock all LLM calls, so they only need a key present to clear
+    # config.py's import-time validation — never a real one.
+    env:
+      GROQ_API_KEY: "ci-dummy-key-not-used-tests-mock-llm"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Lint with flake8 (optional check)
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+      continue-on-error: true
+
+    - name: Run tests
+      run: |
+        pytest tests/ -v --tb=short
+
+    - name: Generate coverage report
+      run: |
+        pytest tests/ --cov=src --cov-report=xml --cov-report=term
+      continue-on-error: true

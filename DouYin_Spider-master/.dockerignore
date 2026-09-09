@@ -1,0 +1,29 @@
+# 注意：本项目 web/ 包下多数模块只有 .pyc（无 .py 源码，仓库爬取时丢失），
+# 因此不能排除 *.pyc，否则镜像内 web 包将残缺、服务无法启动。
+# 仅排除 __pycache__ 目录下的缓存副本。
+__pycache__/
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+datas/media_datas
+data/price_research
+data/intent_analysis
+debug
+Logs
+author
+test_video.mp4
+taobao_debug.html
+taobao_mobile.html
+README.md
+PROJECT_GUIDE.md
+package-lock.json
+package.json
+.venv
+venv
+*.egg-info
+
+# 阿里 TTS 子系统（独立 Dockerfile / 50000 端口，web 镜像经 COSYVOICE_URL HTTP 调用）。
+# 含 3GB 模型权重（pretrained_models 2.2G + wheels 747M），打入镜像无意义且拖慢构建。
+cosyvoice/

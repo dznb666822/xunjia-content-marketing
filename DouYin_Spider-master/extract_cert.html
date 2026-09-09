@@ -1,0 +1,243 @@
+javascript:(function(){
+/* ============================================================
+ *  抖音认证数据提取工具 v2
+ *  用于捕获: client_cert / ticket / ts_sign / private_key
+ *  打开 douyin.com 并登录后，点击此书签即可运行
+ * ============================================================ */
+var CAPTURED = {ticket:'',ts_sign:'',client_cert:'',private_key:''};
+var FINDINGS = [];
+
+/* ---- 1. 扫描页面全局变量 ---- */
+(function scanGlobals(){
+  var keys = Object.keys(window);
+  FINDINGS.push('扫描了 '+keys.length+' 个全局变量');
+  
+  for(var i=0;i<keys.length;i++){
+    try{
+      var k=keys[i];
+      var v=window[k];
+      if(!v || typeof v!=='object') continue;
+      var s=JSON.stringify(v).substring(0,200);
+      if(s.indexOf('ec_privateKey')>-1 || s.indexOf('privateKey')>-1 || s.indexOf('private_key')>-1){
+        FINDINGS.push('发现疑似密钥对象: window.'+k);
+        try{
+          if(v.ec_privateKey) CAPTURED.private_key=v.ec_privateKey;
+          if(v.privateKey) CAPTURED.private_key=v.privateKey;
+          if(v.private_key) CAPTURED.private_key=v.private_key;
+        }catch(e){}
+      }
+      if(s.indexOf('client_cert')>-1 || s.indexOf('clientCert')>-1){
+        FINDINGS.push('发现疑似证书对象: window.'+k);
+        try{
+          if(v.client_cert) CAPTURED.client_cert=v.client_cert;
+          if(v.clientCert) CAPTURED.client_cert=v.clientCert;
+        }catch(e){}
+      }
+    }catch(e){}
+  }
+})();
+
+/* ---- 2. 扫描 IndexedDB ---- */
+(function scanIDB(){
+  if(!window.indexedDB){ FINDINGS.push('IndexedDB 不可用'); return; }
+  try{
+    var req=indexedDB.databases?indexedDB.databases():null;
+    if(req){
+      req.then(function(dbs){
+        FINDINGS.push('发现 '+dbs.length+' 个 IndexedDB 数据库');
+        dbs.forEach(function(db){
+          if(db.name && db.name.toLowerCase().indexOf('ticket')>-1){
+            FINDINGS.push('发现 ticket 相关数据库: '+db.name);
+          }
+        });
+        showResult();
+      });
+      return; // async, result will be shown later
+    }
+  }catch(e){}
+  FINDINGS.push('IndexedDB 扫描完成');
+  showResult();
+})();
+
+/* ---- 3. 安装 XHR 拦截器 ---- */
+(function hookXHR(){
+  var origOpen=XMLHttpRequest.prototype.open;
+  var origSend=XMLHttpRequest.prototype.send;
+  
+  XMLHttpRequest.prototype.open=function(method,url){
+    this._url=url;
+    this._method=method;
+    return origOpen.apply(this,arguments);
+  };
+  
+  XMLHttpRequest.prototype.send=function(body){
+    var xhr=this;
+    var origOnReady=xhr.onreadystatechange;
+    xhr.addEventListener('readystatechange',function(){
+      if(xhr.readyState===4 && xhr.responseText){
+        try{
+          var txt=xhr.responseText;
+          if(txt.indexOf('client_cert')>-1){
+            FINDINGS.push('[XHR] 拦截到 client_cert: '+xhr._url);
+            var d=JSON.parse(txt);
+            if(d.data) d=JSON.parse(d.data);
+            if(d.client_cert) CAPTURED.client_cert=d.client_cert;
+            if(d.ticket) CAPTURED.ticket=d.ticket;
+            if(d.ts_sign) CAPTURED.ts_sign=d.ts_sign;
+            showResult();
+          }
+          if(txt.indexOf('ec_privateKey')>-1){
+            FINDINGS.push('[XHR] 拦截到 private_key: '+xhr._url);
+            var d2=JSON.parse(txt);
+            if(d2.data) d2=JSON.parse(d2.data);
+            if(d2.ec_privateKey) CAPTURED.private_key=d2.ec_privateKey;
+            showResult();
+          }
+        }catch(e){}
+      }
+    });
+    return origSend.apply(this,arguments);
+  };
+  FINDINGS.push('XHR 拦截器已安装 - 刷新页面可重新捕获');
+})();
+
+/* ---- 4. 安装 Fetch 拦截器 ---- */
+(function hookFetch(){
+  if(typeof window._fetch_hooked!=='undefined') return;
+  window._fetch_hooked=true;
+  var origFetch=window.fetch;
+  window.fetch=function(input,init){
+    return origFetch.apply(this,arguments).then(function(resp){
+      var clone=resp.clone();
+      clone.text().then(function(txt){
+        try{
+          if(txt.indexOf('client_cert')>-1 || txt.indexOf('ec_privateKey')>-1){
+            var url=typeof input==='string'?input:(input.url||'');
+            FINDINGS.push('[Fetch] 拦截到认证数据: '+url);
+            var d=JSON.parse(txt);
+            if(d.data) d=JSON.parse(d.data);
+            if(d.client_cert) CAPTURED.client_cert=d.client_cert;
+            if(d.ticket) CAPTURED.ticket=d.ticket;
+            if(d.ts_sign) CAPTURED.ts_sign=d.ts_sign;
+            if(d.ec_privateKey) CAPTURED.private_key=d.ec_privateKey;
+            showResult();
+          }
+        }catch(e){}
+      }).catch(function(){});
+      return resp;
+    });
+  };
+  FINDINGS.push('Fetch 拦截器已安装');
+})();
+
+/* ---- 5. 扫描 localStorage ---- */
+(function scanLS(){
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      var v=localStorage.getItem(k);
+      if(v && (v.indexOf('private')>-1 || v.indexOf('client_cert')>-1)){
+        FINDINGS.push('localStorage 中发现: '+k+' ('+v.length+'字符)');
+      }
+    }
+  }catch(e){}
+  FINDINGS.push('localStorage 扫描完成');
+})();
+
+/* ---- 刷新 ticket (主动触发验证) ---- */
+function refreshTicket(){
+  FINDINGS.push('正在触发 ticket 刷新...');
+  // 触发一个需要验证的请求
+  fetch('https://live.douyin.com/webcast/room/web/enter/?aid=6383&web_rid=1&live_id=1&device_platform=web',{
+    credentials:'include'
+  }).then(function(r){ return r.json(); }).then(function(d){
+    FINDINGS.push('验证请求完成, status_code='+(d.status_code||'?'));
+    showResult();
+  }).catch(function(e){
+    FINDINGS.push('验证请求失败: '+e.message);
+    showResult();
+  });
+}
+
+/* ---- 显示结果面板 ---- */
+function showResult(){
+  var existing=document.getElementById('__cert_extract_panel');
+  if(existing) existing.remove();
+  
+  var html='<div id="__cert_extract_panel" style="position:fixed;top:10px;right:10px;z-index:999999;background:#1e293b;color:#e2e8f0;border-radius:12px;padding:16px 20px;font-size:12px;font-family:monospace;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  html+='<b style="font-size:14px;color:#818cf8;">认证数据提取工具</b>';
+  html+='<button onclick="document.getElementById(\'__cert_extract_panel\').remove()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;">&times;</button>';
+  html+='</div>';
+  
+  // 状态表格
+  var fields=[
+    ['ticket', CAPTURED.ticket],
+    ['ts_sign', CAPTURED.ts_sign],
+    ['client_cert', CAPTURED.client_cert],
+    ['private_key', CAPTURED.private_key]
+  ];
+  html+='<table style="width:100%;border-collapse:collapse;margin-bottom:8px;">';
+  fields.forEach(function(f){
+    var ok=!!f[1];
+    var color=ok?'#4ade80':'#f87171';
+    var label=ok?'已获取':'缺失';
+    var preview=f[1]?f[1].substring(0,40)+'...':'';
+    html+='<tr><td style="padding:4px 0;color:#94a3b8;white-space:nowrap;">'+f[0]+'</td>';
+    html+='<td style="padding:4px 4px;color:'+color+';">'+label+'</td>';
+    html+='<td style="padding:4px 0;color:#64748b;font-size:10px;max-width:200px;overflow:hidden;">'+preview+'</td></tr>';
+  });
+  html+='</table>';
+  
+  // 操作按钮
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">';
+  html+='<button onclick="var d=document.getElementById(\'__cert_data_json\');d.style.display=d.style.display==\'none\'?\'block\':\'none\'" style="padding:5px 10px;border:1px solid #475569;background:transparent;color:#e2e8f0;border-radius:6px;cursor:pointer;font-size:11px;">展开JSON</button>';
+  html+='<button onclick="refreshTicket()" style="padding:5px 10px;border:1px solid #6366f1;background:rgba(99,102,241,0.2);color:#a5b4fc;border-radius:6px;cursor:pointer;font-size:11px;">触发验证请求</button>';
+  html+='<button id="__cert_btn_send" onclick="sendCertToServer()" style="padding:5px 10px;border:none;background:#6366f1;color:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:500;">发送到服务端</button>';
+  html+='</div>';
+  
+  // 完整JSON
+  html+='<pre id="__cert_data_json" style="display:none;background:#0f172a;padding:8px;border-radius:6px;font-size:10px;overflow-x:auto;max-height:200px;">'+JSON.stringify(CAPTURED,null,2)+'</pre>';
+  
+  // 日志
+  html+='<div style="margin-top:8px;border-top:1px solid #334155;padding-top:8px;font-size:10px;color:#64748b;">';
+  FINDINGS.slice(-6).forEach(function(f){
+    html+='<div style="margin-bottom:2px;">'+f+'</div>';
+  });
+  html+='<div style="margin-top:4px;color:#f59e0b;">提示: 如数据仍缺失, 请点击"触发验证请求"后在页面正常浏览, 等待拦截到请求</div>';
+  html+='</div>';
+  
+  html+='</div>';
+  
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+/* ---- 发送到服务端 ---- */
+window.sendCertToServer=function(){
+  var btn=document.getElementById('__cert_btn_send');
+  btn.textContent='发送中...'; btn.disabled=true;
+  
+  fetch('http://127.0.0.1:5000/api/save_auth',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      ticket:CAPTURED.ticket,
+      ts_sign:CAPTURED.ts_sign,
+      client_cert:CAPTURED.client_cert,
+      private_key:CAPTURED.private_key
+    })
+  }).then(function(r){ return r.json(); }).then(function(j){
+    btn.textContent=j.success?'已保存!':'发送失败';
+    btn.style.background=j.success?'#22c55e':'#ef4444';
+    setTimeout(function(){ btn.textContent='发送到服务端'; btn.style.background='#6366f1'; btn.disabled=false; },2000);
+  }).catch(function(e){
+    btn.textContent='连接失败';
+    btn.style.background='#ef4444';
+    setTimeout(function(){ btn.textContent='发送到服务端'; btn.style.background='#6366f1'; btn.disabled=false; },2000);
+  });
+};
+
+/* 初始化 */
+FINDINGS.push('工具就绪 - XHR/Fetch 拦截器已激活');
+showResult();
+})();

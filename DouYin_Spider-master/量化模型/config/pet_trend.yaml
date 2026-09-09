@@ -1,0 +1,83 @@
+# 宠物服饰趋势预测量化模型 · 阶段 A 配置
+# 品牌：Z.paw（高端宠物服装，客单价 1500 元）
+brand: Z.paw
+customer_unit_price: 1500
+
+# 趋势调研关键词（阶段 B 细化为垂类词库，按维度分层；跑趋势时按序逐词采集）
+keywords:
+  # 大盘基准（保留 2 个宽泛词做对照）
+  - 宠物衣服
+  - 狗狗衣服
+  # 品类款式垂类
+  - 宠物羽绒马甲
+  - 宠物四脚羽绒服
+  - 宠物加绒连帽卫衣
+  - 宠物缎面公主裙
+  - 宠物洛丽塔裙
+  - 宠物西装礼服
+  - 宠物护肚针织毛衣
+  - 宠物三防机能服
+  # 风格垂类（人类时尚元素→宠物迁移）
+  - 宠物新中式
+  - 宠物JK制服
+  - 宠物小香风
+  - 宠物老钱风
+  - 宠物法式
+  # 犬猫品种垂类
+  - 马尔济斯衣服
+  - 雪纳瑞衣服
+  - 约克夏衣服
+  - 德文猫衣服
+  - 无毛猫衣服
+  # 场景功能垂类
+  - 宠物婚纱
+  - 宠物拜年服
+  - 宠物四脚防水雨衣
+
+# 阶段一复合加权权重（总和 = 1.0）
+weights:
+  growth_momentum: 0.30   # 增长动能
+  audience_quality: 0.30  # 受众质量
+  style_migration: 0.20   # 风格迁移
+  feasibility: 0.15       # 可行性
+  noise_decay: 0.05       # 噪声衰减（负向扣分）
+
+# TrendScore 判定阈值
+thresholds:
+  high_potential: 0.75   # > 高潜力早期，优先立项
+  watch: 0.55            # 0.55~0.75 观察，小成本测试
+  mature: 0.35           # 0.35~0.55 成熟期，谨慎入场；< 0.35 放弃
+
+# 时间窗口（天），用于按 create_time 分桶计算环比增速/加速度
+windows:
+  recent: 7
+  mid: 14
+  long: 30
+
+# 淘宝低价阈值（元）：低于该值判定为低价铺货流量
+low_price_threshold: 100
+
+# 抖音采集参数
+douyin:
+  sort_type: "0"        # 0 综合 / 1 最多点赞 / 2 最新发布
+  publish_time: "0"     # 0 不限 / 1 一天内 / 7 一周内 / 180 半年内
+  max_pages: 2          # 搜索页数（每页约 20+ 条）
+  max_author_enrich: 20 # 最多二次调用 get_user_info 的作者数（控制频率）
+  request_gap_seconds: [5, 10]  # 抖音请求间随机延时范围
+
+# 淘宝数据来源（从 MySQL price_research 表读取）
+taobao:
+  platform: taobao
+
+# 阶段 B 数据源
+bilibili:
+  enabled: true            # B站跨平台热度验证（公开接口，匿名可访问）
+  max_pages: 2             # 搜索页数
+  page_size: 20            # 每页条数
+  request_gap_seconds: [3, 6]  # B站请求间随机延时范围
+
+# 1688 供应商（复用 services.price_research 的 RPA 采集，platform=1688，需先登录获取 cookie）
+suppliers:
+  enabled: true
+  platform: 1688
+

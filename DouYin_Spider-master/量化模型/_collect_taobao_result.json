@@ -1,0 +1,42 @@
+{
+  "keywords": [
+    {
+      "keyword": "宠物衣服",
+      "status": "completed",
+      "count": 144,
+      "task_id": "pr_20260815212233_2156"
+    },
+    {
+      "keyword": "狗狗衣服",
+      "status": "completed",
+      "count": 96,
+      "task_id": "pr_20260815212608_6951"
+    },
+    {
+      "keyword": "宠物羽绒服",
+      "status": "completed",
+      "count": 96,
+      "task_id": "pr_20260815212843_5158"
+    },
+    {
+      "keyword": "宠物毛衣",
+      "status": "completed",
+      "count": 96,
+      "task_id": "pr_20260815213113_9101"
+    },
+    {
+      "keyword": "宠物汉服",
+      "status": "completed",
+      "count": 95,
+      "task_id": "pr_20260815213343_9522"
+    },
+    {
+      "keyword": "宠物高定",
+      "status": "completed",
+      "count": 100,
+      "task_id": "pr_20260815213603_3883"
+    }
+  ],
+  "started_at": "2026-08-15 21:22:33",
+  "finished_at": "2026-08-15 21:38:13"
+}

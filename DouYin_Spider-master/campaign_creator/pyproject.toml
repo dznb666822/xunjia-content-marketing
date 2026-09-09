@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi-agent-campaign-creator"
+version = "0.1.0"
+description = "AI-powered marketing campaign generation using CrewAI and Groq"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Campaign Creator Contributors"}
+]
+
+dependencies = [
+    "crewai>=0.86.0",
+    "litellm>=1.74.0",
+    "langgraph>=0.2.0",
+    "langchain-groq>=0.1.0",
+    "langchain-community>=0.1.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.10.0",
+    "httpx>=0.25.0",
+    "rich>=13.0.0",
+    "Jinja2>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/multi-agent-campaign-creator"
+Repository = "https://github.com/yourusername/multi-agent-campaign-creator"
+Documentation = "https://github.com/yourusername/multi-agent-campaign-creator#readme"

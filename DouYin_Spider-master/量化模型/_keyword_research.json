@@ -1,0 +1,301 @@
+{
+  "segments": [
+    {
+      "dimension": "品类款式",
+      "keywords": [
+        {
+          "word": "宠物羽绒马甲",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物亲子T恤",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物牛仔背带裤",
+          "trend_potential": "中"
+        },
+        {
+          "word": "宠物加绒连帽卫衣",
+          "trend_potential": "中"
+        },
+        {
+          "word": "宠物恐龙变身装",
+          "trend_potential": "低"
+        },
+        {
+          "word": "宠物三防机能服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物新年唐装",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物缎面公主裙",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物PU棋盘格衬衣",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物四脚防水雨衣",
+          "trend_potential": "中"
+        },
+        {
+          "word": "宠物护肚针织毛衣",
+          "trend_potential": "中"
+        },
+        {
+          "word": "宠物凉凉防晒背心",
+          "trend_potential": "中"
+        },
+        {
+          "word": "宠物西装结婚礼服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物洛丽塔连衣裙",
+          "trend_potential": "高"
+        },
+        {
+          "word": "宠物条纹POLO衫",
+          "trend_potential": "中"
+        }
+      ]
+    },
+    {
+      "dimension": "风格",
+      "keywords": [
+        {
+          "word": "潮牌联名风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "新中式国风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "甜酷机能风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "法式公主风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "复古英伦风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "老钱休闲风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "洛丽塔甜妹风",
+          "trend_potential": "高"
+        },
+        {
+          "word": "可爱搞怪风",
+          "trend_potential": "中"
+        },
+        {
+          "word": "韩系网红风",
+          "trend_potential": "中"
+        },
+        {
+          "word": "日式极简风",
+          "trend_potential": "中"
+        },
+        {
+          "word": "美式校园风",
+          "trend_potential": "中"
+        },
+        {
+          "word": "卡通IP联名风",
+          "trend_potential": "低"
+        }
+      ]
+    },
+    {
+      "dimension": "材质工艺",
+      "keywords": [
+        {
+          "word": "三防科技面料",
+          "trend_potential": "高"
+        },
+        {
+          "word": "缎面刺绣",
+          "trend_potential": "高"
+        },
+        {
+          "word": "PU皮质",
+          "trend_potential": "高"
+        },
+        {
+          "word": "数码直喷印花",
+          "trend_potential": "高"
+        },
+        {
+          "word": "90白鸭绒填充",
+          "trend_potential": "高"
+        },
+        {
+          "word": "纯棉印花",
+          "trend_potential": "中"
+        },
+        {
+          "word": "法兰绒加绒",
+          "trend_potential": "中"
+        },
+        {
+          "word": "半边绒针织",
+          "trend_potential": "中"
+        },
+        {
+          "word": "丹宁牛仔",
+          "trend_potential": "中"
+        },
+        {
+          "word": "冰丝凉感",
+          "trend_potential": "中"
+        },
+        {
+          "word": "羊羔绒加厚",
+          "trend_potential": "中"
+        },
+        {
+          "word": "网纱蕾丝",
+          "trend_potential": "中"
+        },
+        {
+          "word": "毛呢剪裁",
+          "trend_potential": "中"
+        },
+        {
+          "word": "德绒保暖",
+          "trend_potential": "中"
+        }
+      ]
+    },
+    {
+      "dimension": "犬猫品种",
+      "keywords": [
+        {
+          "word": "马尔济斯衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "雪纳瑞衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "德文猫衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "西高地衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "无毛猫衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "约克夏衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "腊肠犬衣服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "布偶猫衣服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "泰迪比熊衣服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "柯基柴犬衣服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "银渐层衣服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "金毛边牧衣服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "英短猫衣服",
+          "trend_potential": "低"
+        }
+      ]
+    },
+    {
+      "dimension": "场景功能",
+      "keywords": [
+        {
+          "word": "可牵引外出服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "防寒滑雪服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "降温凉凉衣",
+          "trend_potential": "高"
+        },
+        {
+          "word": "防水冲锋衣",
+          "trend_potential": "高"
+        },
+        {
+          "word": "婚礼礼服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "定制纪念服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "NFC防丢服",
+          "trend_potential": "高"
+        },
+        {
+          "word": "防掉毛家居服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "绝育术后服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "游泳救生衣",
+          "trend_potential": "中"
+        },
+        {
+          "word": "cos拍照服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "新年拜年服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "防虫防晒服",
+          "trend_potential": "中"
+        },
+        {
+          "word": "防脏遛弯服",
+          "trend_potential": "中"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+# 面料/工艺/成本/版型 静态知识库（阶段 A 用于可行性因子，后续可扩展）
+# 说明：本文件为静态经验值，阶段 A 仅做"可行性因子"的兜底打分，不参与硬数据采集。
+
+fabrics:
+  - name: 羊绒
+    cost_band: [180, 400]
+    procurement: easy          # easy / normal / hard
+    craft_difficulty: medium    # low / medium / high
+    lead_time_days: 15
+    high_end_fit: true
+  - name: 真丝
+    cost_band: [120, 300]
+    procurement: normal
+    craft_difficulty: high
+    lead_time_days: 20
+    high_end_fit: true
+  - name: 纯棉
+    cost_band: [20, 60]
+    procurement: easy
+    craft_difficulty: low
+    lead_time_days: 10
+    high_end_fit: false
+  - name: 摇粒绒
+    cost_band: [25, 70]
+    procurement: easy
+    craft_difficulty: low
+    lead_time_days: 10
+    high_end_fit: false
+  - name: 羽绒
+    cost_band: [80, 220]
+    procurement: normal
+    craft_difficulty: medium
+    lead_time_days: 18
+    high_end_fit: true
+  - name: 羊毛混纺
+    cost_band: [60, 150]
+    procurement: normal
+    craft_difficulty: medium
+    lead_time_days: 14
+    high_end_fit: true
+  - name: 蕾丝
+    cost_band: [30, 90]
+    procurement: normal
+    craft_difficulty: medium
+    lead_time_days: 12
+    high_end_fit: false
+  - name: 提花面料
+    cost_band: [70, 180]
+    procurement: normal
+    craft_difficulty: high
+    lead_time_days: 16
+    high_end_fit: true
+
+# 人类时尚元素 → 宠物适配（阶段 A 静态映射，配合豆包做"人→宠"迁移打分）
+element_mapping:
+  - human_element: 复古格纹
+    pet_adaptability: high
+    note: 秋冬外套/马甲，版型易改造
+  - human_element: 新中式立领盘扣
+    pet_adaptability: high
+    note: 宠物汉服/旗袍，高端感强
+  - human_element: 廓形羽绒
+    pet_adaptability: medium
+    note: 注意宠物活动自由度
+  - human_element: 机能工装
+    pet_adaptability: medium
+    note: 口袋/拉链需简化
+  - human_element: 蕾丝纱裙
+    pet_adaptability: low
+    note: 易勾挂，耐用性差
+  - human_element: 毛呢大衣
+    pet_adaptability: high
+    note: 客单价高，适合高定
+  - human_element: 学院风针织
+    pet_adaptability: high
+    note: 毛衣/开衫，日常实穿
+
+# 宠物版型改造适配要点
+silhouette:
+  high_end_notes:
+    - 预留胸背活动余量，避免束缚前肢
+    - 采用可调节魔术贴/按扣，适应不同犬猫体型
+    - 面料亲肤透气，内衬软质
+  cost_note: 高定宠物服饰面料与工艺成本通常为成人同款的 60%~80%

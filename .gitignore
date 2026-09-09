@@ -1,0 +1,81 @@
+# ===== 环境与依赖 =====
+.venv/
+venv/
+env/
+ENV/
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.so
+build/
+dist/
+*.egg-info/
+
+# ===== 本地环境变量（密钥与凭证，勿入库） =====
+.env
+.env.*
+!.env.example
+
+# ===== 日志与临时文件 =====
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# ===== IDE / 工具配置 =====
+.trae/
+.idea/
+.vscode/
+
+# ===== 数据目录（体积大，一律不上传） =====
+datas/
+uploads/
+smart-clip-output/
+output/
+outputs/
+downloads/
+media_datas/
+
+# ===== 本地 git 备份（不入库） =====
+campaign_creator_git_backup/
+*_git_backup/
+
+# ===== OS 临时文件 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ===== 数据库 / 缓存 =====
+*.db
+*.sqlite
+*.sqlite3
+.cache/
+
+# ===== 大体积模型与数据 =====
+pretrained_models/
+checkpoints/
+*.bin
+*.safetensors
+*.pt
+*.h5
+*.onnx
+
+# ===== 本项目运行时产物（容器内生成，重建会丢） =====
+DouYin_Spider-master/static/material/
+DouYin_Spider-master/static/policy-docs/
+DouYin_Spider-master/static/ai-clips/
+DouYin_Spider-master/static/screenshots/
+DouYin_Spider-master/debug/
+
+# ===== Remotion 渲染产物 =====
+remotion-demo/out/
+
+# ===== WorkBuddy 内部数据 =====
+.workbuddy/
+
+# ===== 本地规划文件 =====
+DouYin_Spider-master/campaign_creator/.planning/

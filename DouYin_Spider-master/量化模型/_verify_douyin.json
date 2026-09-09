@@ -1,0 +1,45 @@
+{
+  "keyword": "宠物衣服",
+  "general": {
+    "resp_keys": [
+      "status_code",
+      "data",
+      "qc",
+      "cursor",
+      "has_more",
+      "extra",
+      "log_pb",
+      "search_nil_info",
+      "guide_search_words",
+      "global_doodle_config",
+      "polling_time",
+      "time_cost",
+      "ops",
+      "douyin_ai_search_info",
+      "maokai_extra",
+      "path",
+      "mock_recall_path"
+    ],
+    "data_count": 0,
+    "aweme_count": 0,
+    "aweme_info_keys": [],
+    "sample": {
+      "aweme_id": null,
+      "desc": null,
+      "create_time": null,
+      "statistics": null,
+      "cha_list": null,
+      "text_extra": null,
+      "author_keys": [],
+      "author": {
+        "nickname": null,
+        "sec_uid": null,
+        "follower_count": null
+      }
+    }
+  },
+  "video": {
+    "error": "'guide_search_words'"
+  },
+  "user_info": {}
+}

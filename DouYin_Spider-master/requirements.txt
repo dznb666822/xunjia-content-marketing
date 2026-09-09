@@ -1,0 +1,57 @@
+# ---- 原项目依赖（保持原样）----
+aiofiles
+beautifulsoup4
+ecdsa
+loguru
+openpyxl
+pillow
+python-dotenv
+qrcode
+requests
+retry
+urllib3
+websockets
+APScheduler>=3.10.0
+# 注意：原文件写的 volcenginesdkarkruntime 在 PyPI 上只有 0.0.1，是个空壳包（__init__.py 为空），
+# 不含 AsyncArk，服务启动即 ImportError。真正的实现在 volcengine-python-sdk[ark] 中，见下方。
+pymysql
+cryptography
+edge-tts
+
+# 注：原文件含 protobuf3_to_dict，全项目无任何引用，
+# 且它会把 protobuf 锁在 4.x 以下，与 static/*_pb2.py（gencode 5.27.1）冲突，故移除。
+
+# ---- Docker 运行必需、原文件缺失的依赖 ----
+# 火山方舟 Ark SDK：真正提供 volcenginesdkarkruntime.AsyncArk 的包
+# （services/video_analyzer.py / video_classifier.py 直接依赖）
+volcengine-python-sdk[ark]>=5.0.0
+
+# Web 服务（web_server.py / web/__init__.py 直接依赖）
+flask>=3.0.0
+flask-cors>=4.0.0
+werkzeug>=3.0.0
+
+# 抖音签名与 protobuf（static/*_pb2.py 由 protoc 5.27.1 生成，必须 >=5.27.1）
+protobuf>=5.27.1,<6.0.0
+# 注意：blackboxprotobuf 1.0.1 会强制 protobuf==3.10.0，与上面的 5.x 冲突，
+# 因此在 Dockerfile 中以 --no-deps 单独安装（它只用于 dy_apis 的兜底解码路径）。
+
+# 热点雷达 trendradar（trendradar/context.py 模块级 import litellm）
+# ruamel.yaml：trendradar/core/loader.py 用它读取 config/config.yaml
+litellm>=1.40.0
+ruamel.yaml
+json-repair
+feedparser
+PyYAML>=6.0
+pytz
+
+# 直播监听 / 私信 / 登录
+websocket-client
+aiohttp
+
+# 竞品价格调研（运行时按需，无浏览器时功能降级但不影响启动）
+selenium>=4.15.0
+
+# 视频抽帧 / 分镜 storyboard 生成（web/analysis.pyc 中 import cv2）
+opencv-python-headless>=4.8.0
+numpy

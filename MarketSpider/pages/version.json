@@ -1,0 +1,49 @@
+{
+    "description": "版本文件,notification用于打开更新时的公告",
+    "notification": "",
+    "Core": {
+        "version": "2.0-beta1",
+        "time": "2025-03-18",
+        "instruction": "测试发布,该组件接口尚未稳定."
+    },
+    "GetCookie": {
+        "version": "2.0",
+        "time": "2025-03-18",
+        "instruction": ""
+    },
+    "Update": {
+        "version": "1.1",
+        "time": "2025-03-18",
+        "instruction": ""
+    },
+    "Starter": {
+        "version": "1.1",
+        "time": "2025-03-25",
+        "instruction": "修复显示时间时的类型错误"
+    },
+    "Spider_taobao": {
+        "version": "2.0.0",
+        "time": "2025-03-25",
+        "instruction": "公测版本,尚未对反爬进行处理."
+    },
+    "Spider_jd": {
+        "version": "2.0.0",
+        "time": "2025-03-18",
+        "instruction": "V2.0.0正式版"
+    },
+    "Spider_1688": {
+        "version": "1.0",
+        "time": "2022-07-28",
+        "instruction": ""
+    },
+    "HarReader_jingxi": {
+        "version": "1.0",
+        "time": "2022-07-28",
+        "instruction": "已弃用"
+    },
+    "HarReader_pdd": {
+        "version": "1.0",
+        "time": "2022-07-28",
+        "instruction": "已弃用"
+    }
+}

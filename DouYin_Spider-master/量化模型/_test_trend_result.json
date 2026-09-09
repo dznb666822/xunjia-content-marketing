@@ -1,0 +1,51 @@
+{
+  "trend_name": "宠物衣服",
+  "elements": {
+    "hashtags": [
+      "萌宠出道计划",
+      "狗狗衣服",
+      "萌宠好物",
+      "缝纫日常",
+      "治愈系",
+      "狗狗",
+      "萌宠日常记录",
+      "宠物穿搭"
+    ],
+    "fabrics": [
+      "羊绒",
+      "真丝",
+      "纯棉",
+      "摇粒绒",
+      "羽绒",
+      "羊毛混纺",
+      "蕾丝",
+      "提花面料"
+    ]
+  },
+  "trend_score": 0.4059,
+  "group_scores": {
+    "growth_momentum": 0.5,
+    "audience_quality": 0.2184,
+    "style_migration": 0.5,
+    "feasibility": 0.7469,
+    "noise_decay": 0.4333
+  },
+  "lifecycle": "成熟期",
+  "action": "谨慎入场",
+  "burst_window": "未来 30~60 天（发布加速中）",
+  "high_end_advice": "围绕\"宠物衣服\"做高端化：优先羊绒、真丝、纯棉等高端面料，采用可调节版型与软质内衬，突出原创设计/手工/重工卖点。",
+  "risks": [
+    "暂无明显结构性风险"
+  ],
+  "material_keywords": [
+    "萌宠出道计划",
+    "狗狗衣服",
+    "萌宠好物",
+    "缝纫日常",
+    "治愈系"
+  ],
+  "data_summary": {
+    "douyin_works": 23,
+    "taobao_products": 192
+  }
+}

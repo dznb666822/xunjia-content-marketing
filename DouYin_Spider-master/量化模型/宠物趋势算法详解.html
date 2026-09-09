@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宠物趋势预测 · 算法详解</title>
+<style>
+  :root{--bg:#faf6ef;--card:#fff;--ink:#2b2320;--muted:#7a6f66;--brand:#1f3d34;
+  --brand-soft:#e8efe9;--gold:#b8860b;--gold-soft:#f5ecd8;--line:#ece4d8;--red:#b3472f;
+  --green:#2e7d4f;--blue:#2f5f8f;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 90px;}
+  .mono{font-family:"SF Mono","Cascadia Code",Consolas,monospace;}
+  .hero{background:linear-gradient(135deg,#1f3d34,#2c5447 55%,#3a6a58);color:#fff;border-radius:18px;
+  padding:46px 44px;position:relative;overflow:hidden;}
+  .hero::after{content:"";position:absolute;right:-70px;top:-70px;width:270px;height:270px;
+  background:radial-gradient(circle,rgba(184,134,11,.35),transparent 70%);border-radius:50%;}
+  .hero .brand{display:inline-block;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  color:#e8d6a8;border:1px solid rgba(232,214,168,.5);padding:4px 13px;border-radius:999px;margin-bottom:18px;}
+  .hero h1{font-size:29px;font-weight:700;margin-bottom:10px;}
+  .hero p{color:#d7e4dd;font-size:15px;max-width:700px;}
+  section{margin-top:46px;}
+  h2{font-size:21px;color:var(--brand);padding-bottom:10px;margin-bottom:20px;border-bottom:2px solid var(--line);
+  display:flex;align-items:center;gap:10px;}
+  h2 .no{background:var(--brand);color:#fff;width:27px;height:27px;border-radius:8px;display:inline-flex;
+  align-items:center;justify-content:center;font-size:13px;flex:none;}
+  h3{color:var(--brand);font-size:16px;margin-bottom:10px;}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);
+  border-radius:13px;padding:18px;}
+  .flow .box{background:var(--brand-soft);color:var(--brand);padding:8px 14px;border-radius:9px;font-size:13px;font-weight:600;}
+  .flow .arrow{color:var(--gold);font-weight:700;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:20px 22px;}
+  .plat{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .plat .p{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:18px;}
+  .plat .p .pn{font-weight:700;color:var(--brand);font-size:15px;margin-bottom:6px;}
+  .plat .p .pt{font-size:12px;color:var(--gold);font-weight:600;margin-bottom:6px;}
+  .plat .p .pd{font-size:13px;color:var(--muted);}
+  .plat .p .pf{font-size:12px;color:var(--brand);background:var(--brand-soft);padding:2px 7px;border-radius:5px;
+  display:inline-block;margin-top:6px;}
+  .norm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .norm{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:16px;}
+  .norm .n-name{font-weight:700;color:var(--brand);margin-bottom:6px;}
+  .norm .n-f{font-family:Consolas,monospace;color:var(--gold);font-size:14px;margin-bottom:6px;}
+  .norm .n-d{font-size:12.5px;color:var(--muted);}
+  .factor{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px;margin-bottom:20px;}
+  .f-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .f-name{font-size:18px;font-weight:700;color:var(--brand);}
+  .f-weight{background:var(--gold-soft);color:var(--gold);font-weight:700;font-size:13px;padding:2px 9px;border-radius:7px;}
+  .f-src{color:var(--muted);font-size:13px;}
+  .f-desc{color:var(--ink);font-size:13.5px;margin-bottom:8px;}
+  .f-agg{font-size:12.5px;color:var(--blue);margin-bottom:12px;}
+  .subtable{width:100%;border-collapse:collapse;}
+  .subtable th,.subtable td{padding:8px 10px;font-size:13px;border-bottom:1px solid var(--line);text-align:left;
+  vertical-align:top;}
+  .subtable th{background:var(--brand-soft);color:var(--brand);}
+  .sub-name{font-weight:600;white-space:nowrap;}
+  .sub-formula{font-family:Consolas,monospace;color:var(--ink);}
+  .sub-src{color:var(--muted);}
+  .formula-card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gold);
+  border-radius:13px;padding:22px 24px;margin-top:16px;}
+  .formula{font-family:Consolas,monospace;font-size:16px;font-weight:600;color:var(--brand);}
+  .formula .w{color:var(--gold);}
+  .judge{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .judge .j{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
+  .judge .j .js{font-family:Consolas,monospace;font-size:17px;font-weight:700;margin-bottom:4px;}
+  .judge .j .jl{font-size:13px;font-weight:600;margin-bottom:2px;}
+  .judge .j .ja{font-size:12px;color:var(--muted);}
+  .demo table{width:100%;border-collapse:collapse;}
+  .demo th,.demo td{padding:9px 12px;text-align:left;font-size:14px;border-bottom:1px solid var(--line);}
+  .demo th{background:var(--brand-soft);color:var(--brand);}
+  .demo .sum td{border-top:2px solid var(--gold);font-weight:700;color:var(--gold);}
+  .tablescroll{overflow-x:auto;}
+  table.main{width:100%;border-collapse:collapse;background:var(--card);border-radius:13px;overflow:hidden;
+  box-shadow:0 4px 18px rgba(43,35,32,.05);}
+  table.main th,table.main td{padding:10px 10px;text-align:center;font-size:13px;border-bottom:1px solid var(--line);
+  white-space:nowrap;}
+  table.main th{background:var(--brand-soft);color:var(--brand);font-weight:700;}
+  table.main td:nth-child(2){text-align:left;}
+  .score{color:var(--gold);font-weight:700;}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;}
+  .p-high{background:#e5f2ea;color:var(--green);}.p-watch{background:#f5ecd8;color:var(--gold);}
+  .p-mature{background:#e7eef6;color:var(--blue);}.p-drop{background:#f6e4df;color:var(--red);}
+  .dbox{text-align:left;background:#faf7f1;border-radius:10px;padding:14px 16px;}
+  .dgrid{display:flex;gap:22px;margin-bottom:10px;}.dgrid div{font-size:13px;}
+  .dl{color:var(--muted);font-size:12px;margin-right:6px;}
+  .dcal{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .cc{background:var(--brand-soft);color:var(--brand);font-size:12px;padding:3px 8px;border-radius:6px;}
+  .cc.total{background:var(--gold-soft);color:var(--gold);font-weight:700;}
+  .dmeta{display:flex;flex-direction:column;gap:6px;font-size:13px;}
+  .risk ul{margin:4px 0 0 18px;color:var(--red);}
+  .footer{margin-top:50px;text-align:center;color:var(--muted);font-size:13px;}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px;}
+  @media(max-width:760px){.plat,.norm-grid,.judge{grid-template-columns:1fr;}}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <span class="brand">Z.paw · Trend Engine · 算法详解</span>
+    <h1>宠物服饰趋势预测：从数据采集到分数的每一步</h1>
+    <p>完整还原 23 个垂类词的算法链路：数据如何获取、子特征如何计算、如何归一化聚合、如何加权成 TrendScore、如何判定生命周期。所有公式与源码一一对应。</p>
+  </div>
+
+  <section>
+    <h2><span class="no">1</span>总览：一条完整链路</h2>
+    <div class="flow">
+      <span class="box">数据采集（抖音/B站/淘宝/1688）</span><span class="arrow">→</span>
+      <span class="box">五因子 × 子特征（18 个）</span><span class="arrow">→</span>
+      <span class="box">子特征均值 = 分组得分</span><span class="arrow">→</span>
+      <span class="box">加权求和 = TrendScore</span><span class="arrow">→</span>
+      <span class="box">阈值判定 = 生命周期 + 动作</span>
+    </div>
+    <div class="formula-card">
+      <div class="formula">TrendScore = <span class="w">0.30</span>·增长动能 + <span class="w">0.30</span>·受众质量 + <span class="w">0.20</span>·风格迁移 + <span class="w">0.15</span>·可行性 − <span class="w">0.05</span>·噪声衰减</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">2</span>数据如何获取（四平台）</h2>
+    <div class="plat">
+      <div class="p"><div class="pn">抖音 · 作品 + 作者</div><div class="pt">采集 · dy_apis.douyin_api</div>
+        <div class="pd">search_general_work 搜作品，取 desc / create_time / 赞评转藏 / 作者 sec_uid；再对头部作者 get_user_info 补真实粉丝数（上限 20）。</div>
+        <span class="pf">频控：单页 3 次退避重试（8/16/24s）+ 整词 0 条再等 30s 重跑</span></div>
+      <div class="p"><div class="pn">B站 · 视频热度</div><div class="pt">公开接口 · api.bilibili.com</div>
+        <div class="pd">search/type 视频搜索，匿名 + buvid cookie，取 play / danmaku / favorites / like / comment。</div>
+        <span class="pf">频控：页间随机 3~6s 延时</span></div>
+      <div class="p"><div class="pn">淘宝 · 商品 + 价格带</div><div class="pt">RPA · services.price_research</div>
+        <div class="pd">Selenium 非无头浏览器采集，落库 price_research 表（platform=taobao），取 item_price / item_shop / item_name。</div>
+        <span class="pf">读表时严格 platform=taobao 过滤（避免混入 1688）</span></div>
+      <div class="p"><div class="pn">1688 · 供应商</div><div class="pt">RPA · services.price_research</div>
+        <div class="pd">Selenium + 登录 cookie，搜索关键词需 GBK 编码；取商品卡片 innerText + IM 链接 uid 映射公司名。</div>
+        <span class="pf">反爬：检测滑块验证（拖动滑块/滑动验证）等人工完成后继续</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">3</span>归一化工具（计算技巧基础）</h2>
+    
+    <div class="norm-grid">
+      <div class="norm"><div class="n-name">clamp01(x)</div><div class="n-f">max(0, min(1, x))</div>
+        <div class="n-d">把任意数值截断到 0~1，用于占比、比率、AI 分数等天然有界量的兜底。</div></div>
+      <div class="norm"><div class="n-name">growth_norm(g)</div><div class="n-f">clamp01((g + 1) / 2)</div>
+        <div class="n-d">把增速 g∈(−∞,+∞) 映射到 0~1：g=0 → 0.5（持平），g>0 → >0.5（增长），g<0 → <0.5（下滑）。</div></div>
+      <div class="norm"><div class="n-name">对数压平</div><div class="n-f">log10(x + 1)</div>
+        <div class="n-d">播放量/粉丝数跨度极大（几十到几百万），先取对数再归一，避免头部霸榜。</div></div>
+    </div>
+    
+  </section>
+
+  <section>
+    <h2><span class="no">4</span>五因子 × 子特征（18 个计算公式）</h2>
+    <div class="factor"><div class="f-head"><span class="f-name">增长动能</span><span class="f-weight">+0.30</span><span class="f-src">抖音 + B站</span></div><p class="f-desc">衡量趋势的“势能”：发布量是否在加速、互动是否超预期、新作者是否涌入、跨平台是否同步升温。</p><div class="f-agg">聚合方式：<b>5 个子特征算术平均</b></div><table class="subtable"><thead><tr><th>子特征</th><th>计算公式</th><th>数据来源</th></tr></thead><tbody><tr><td class="sub-name">发布量环比增速</td><td class="sub-formula">(近7天发布量 − 前7天发布量) ÷ max(前7天, 1)</td><td class="sub-src">抖音 create_time 按近7天 / 8~14天 / 15~30天分桶计数</td></tr><tr><td class="sub-name">二阶差分加速度</td><td class="sub-formula">[(近7天 − 前7天) − (前7天 − 更早)] ÷ max(前7天 + 更早, 1)</td><td class="sub-src">同上三个时间桶，做两次一阶差</td></tr><tr><td class="sub-name">互动-发布背离度</td><td class="sub-formula">互动增速 − 发布增速；互动增速 = (近7天互动 − 前7天互动) ÷ max(前7天互动, 1)</td><td class="sub-src">抖音 赞+评+转+藏 四类互动量，按同款时间桶</td></tr><tr><td class="sub-name">新达人入局率</td><td class="sub-formula">近7天出现的新作者数 ÷ 全部作者数</td><td class="sub-src">抖音作者 sec_uid 去重，按作品时间归属</td></tr><tr><td class="sub-name">跨平台热度</td><td class="sub-formula">0.5×数量分 + 0.5×播放分；数量分 = min(条数/20, 1)，播放分 = min(log10(均播放+1)/5, 1)</td><td class="sub-src">B站搜索接口 play 字段，对数压平长尾</td></tr></tbody></table></div><div class="factor"><div class="f-head"><span class="f-name">受众质量</span><span class="f-weight">+0.30</span><span class="f-src">抖音 + 淘宝</span></div><p class="f-desc">衡量“谁在关注、愿不愿意付费”：作者粉丝层级、标题高端词、求购需求密度、淘宝价格带。</p><div class="f-agg">聚合方式：<b>5 个子特征算术平均</b></div><table class="subtable"><thead><tr><th>子特征</th><th>计算公式</th><th>数据来源</th></tr></thead><tbody><tr><td class="sub-name">作者粉丝层级</td><td class="sub-formula">0.5×高粉占比 + 0.5×(均 log10(粉丝+1) ÷ 6)；高粉 = 粉丝 ≥ 1 万</td><td class="sub-src">抖音 get_user_info 二次查询真实粉丝数（优先补头部作者，上限 20）</td></tr><tr><td class="sub-name">高客单笔记占比</td><td class="sub-formula">命中高端词的作品数 ÷ 总作品数</td><td class="sub-src">抖音标题命中「高定/定制/轻奢/高端/奢华/重工/手工/原创设计」</td></tr><tr><td class="sub-name">正向需求密度</td><td class="sub-formula">命中需求词的作品数 ÷ 总作品数</td><td class="sub-src">抖音标题命中「求/想要/哪里买/怎么买/链接/多少钱/蹲/推荐/种草」</td></tr><tr><td class="sub-name">购买意向密度</td><td class="sub-formula">需求占比 × 0.8</td><td class="sub-src">同上需求词，乘 0.8 折算为更“硬”的购买信号</td></tr><tr><td class="sub-name">高价占比（低价反向）</td><td class="sub-formula">1 − 淘宝低价占比；低价 = 价格 < 100 元</td><td class="sub-src">淘宝 item_price 解析为数值后统计 <100 占比</td></tr></tbody></table></div><div class="factor"><div class="f-head"><span class="f-name">风格迁移</span><span class="f-weight">+0.20</span><span class="f-src">AI + 知识库</span></div><p class="f-desc">衡量“人类时尚元素能否迁移到高端宠物服饰”，冷启动阶段用 AI 打分 + 静态知识库兜底。</p><div class="f-agg">聚合方式：<b>1 个子特征（直接取值）</b></div><table class="subtable"><thead><tr><th>子特征</th><th>计算公式</th><th>数据来源</th></tr></thead><tbody><tr><td class="sub-name">人→宠迁移适配度</td><td class="sub-formula">AI(豆包 Seed 2.0) 输出 0~1；失败时回退静态分 = clamp01(0.3 + 0.35 × min(命中数, 2))</td><td class="sub-src">AI 读关键词 + 前5条作品标题打分；静态分用知识库 element_mapping 高适配元素命中数</td></tr></tbody></table></div><div class="factor"><div class="f-head"><span class="f-name">可行性</span><span class="f-weight">+0.15</span><span class="f-src">知识库 + 1688</span></div><p class="f-desc">衡量“能不能做出来、成本扛不扛得住”：面料可采购、工艺难度、成本适配、版型改造。</p><div class="f-agg">聚合方式：<b>4 个子特征算术平均</b></div><table class="subtable"><thead><tr><th>子特征</th><th>计算公式</th><th>数据来源</th></tr></thead><tbody><tr><td class="sub-name">面料可采购性</td><td class="sub-formula">知识库 procurement 映射 {易:1.0, 中:0.7, 难:0.4} 取均值；有 1688 硬数据时覆盖为 0.4 + 0.6×min(去重店铺,30)÷30</td><td class="sub-src">知识库面料卡 + 1688 供应商去重店铺数（供应链全局共享）</td></tr><tr><td class="sub-name">工艺难度</td><td class="sub-formula">craft 映射 {低:1.0, 中:0.7, 高:0.4} 取均值</td><td class="sub-src">知识库面料卡的工艺难度标签</td></tr><tr><td class="sub-name">成本适配</td><td class="sub-formula">0.4 + 0.6 × 高端面料占比</td><td class="sub-src">知识库面料卡的 high_end_fit 标记</td></tr><tr><td class="sub-name">版型改造</td><td class="sub-formula">固定 0.7</td><td class="sub-src">冷启动阶段静态给中等偏上（人→宠版型可改造性预判）</td></tr></tbody></table></div><div class="factor"><div class="f-head"><span class="f-name">噪声衰减</span><span class="f-weight">−0.05</span><span class="f-src">淘宝 + AI</span></div><p class="f-desc">负向扣分项：衡量“是不是伪趋势/红海/网红梗”，越吵杂分扣得越多。</p><div class="f-agg">聚合方式：<b>3 个子特征算术平均</b></div><table class="subtable"><thead><tr><th>子特征</th><th>计算公式</th><th>数据来源</th></tr></thead><tbody><tr><td class="sub-name">卖家密度（内卷度）</td><td class="sub-formula">去重店铺数 ÷ 商品数</td><td class="sub-src">淘宝 item_shop 去重后与商品数比值</td></tr><tr><td class="sub-name">低价铺货饱和</td><td class="sub-formula">价格 < 100 元的占比</td><td class="sub-src">淘宝 item_price 解析统计</td></tr><tr><td class="sub-name">网红梗/退货风险</td><td class="sub-formula">AI(豆包) 输出 0~1；失败回退 0.3</td><td class="sub-src">AI 评估短期网红梗快速衰退/高退货概率</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <h2><span class="no">5</span>聚合与加权</h2>
+    <div class="card">
+      <h3>第一步：子特征 → 分组得分（组内算术平均）</h3>
+      <div class="formula" style="font-size:14px;">group_score = mean(该因子下所有子特征)</div>
+      <p class="note">增长动能/受众质量/可行性/噪声衰减取组内均值；风格迁移只有 1 个子特征，直接取值。这样每个因子得分都在 0~1。</p>
+      <h3 style="margin-top:16px;">第二步：分组得分 → TrendScore（加权求和，噪声为负）</h3>
+      <div class="formula" style="font-size:14px;">TrendScore = clamp01( Σ weight × group_score )</div>
+      <p class="note">噪声衰减是唯一负权重（−0.05），因为它衡量的是内卷/低价/网红梗风险，分数越高反而要扣分。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">6</span>阈值判定与七项输出</h2>
+    <div class="judge">
+      <div class="j"><div class="js" style="color:#2e7d4f;">&gt; 0.75</div><div class="jl">萌芽 / 高潜力早期</div><div class="ja">优先立项</div></div>
+      <div class="j"><div class="js" style="color:#b8860b;">0.55 ~ 0.75</div><div class="jl">观察期</div><div class="ja">小成本素材测试</div></div>
+      <div class="j"><div class="js" style="color:#2f5f8f;">0.35 ~ 0.55</div><div class="jl">成熟期</div><div class="ja">谨慎入场</div></div>
+      <div class="j"><div class="js" style="color:#b3472f;">&lt; 0.35</div><div class="jl">衰退 / 伪趋势</div><div class="ja">放弃</div></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>爆发窗口（由加速度 + 互动背离度判定）</h3>
+      <div class="formula" style="font-size:13px;">accel &gt; 0.6 且 divergence &gt; 0.6 → 未来30天；仅 accel &gt; 0.55 → 30~60天；否则 → 60~90天</div>
+      <h3 style="margin-top:14px;">风险提示（噪声因子超阈值触发）</h3>
+      <div class="formula" style="font-size:13px;">seller_density&gt;0.6 → 内卷；low_price_saturation&gt;0.6 → 低价；hot_meme_risk&gt;0.6 → 网红梗；douyin&lt;5 → 样本不足</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">7</span>完整计算演示（Top1：宠物三防机能服）</h2>
+    <div class="card demo">
+      <table>
+        <thead><tr><th>因子</th><th>分组得分</th><th>权重 × 得分</th><th>贡献值</th></tr></thead>
+        <tbody><tr><td>增长动能</td><td class="mono">0.8011</td><td class="mono">+ × 0.3000</td><td class="mono">+0.2403</td></tr><tr><td>受众质量</td><td class="mono">0.3698</td><td class="mono">+ × 0.3000</td><td class="mono">+0.1109</td></tr><tr><td>风格迁移</td><td class="mono">0.8500</td><td class="mono">+ × 0.2000</td><td class="mono">+0.1700</td></tr><tr><td>可行性</td><td class="mono">0.7937</td><td class="mono">+ × 0.1500</td><td class="mono">+0.1191</td></tr><tr><td>噪声衰减</td><td class="mono">0.5633</td><td class="mono">− × -0.0500</td><td class="mono">−-0.0282</td></tr><tr class="sum"><td>合计 TrendScore</td><td></td><td></td><td>0.6122</td></tr></tbody>
+      </table>
+      <p class="note">分组得分 = 该因子各子特征的算术平均（见第 4 节）；贡献值 = 权重 × 分组得分；TrendScore = 各贡献值之和（噪声为负）。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">8</span>23 词完整数值表</h2>
+    <div class="tablescroll">
+      <table class="main">
+        <thead><tr><th>#</th><th>关键词</th><th>增长动能</th><th>受众质量</th><th>风格迁移</th><th>可行性</th><th>噪声衰减</th><th>TrendScore</th><th>生命周期</th><th>动作</th></tr></thead>
+        <tbody><tr class="main"><td>1</td><td><b>宠物三防机能服</b></td><td class="mono">0.8011</td><td class="mono">0.3698</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.5633</td><td class="mono score">0.6122</td><td><span class="pill p-watch">观察期</span></td><td>小成本素材测试</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>25</div><div><span class="dl">淘宝</span>50</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2403</span><span class="cc">受众质量 +0.1109</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0282</span><span class="cc total">TrendScore = 0.6122</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>宠物衣服 / 狗狗衣服 / 萌宠好物 / 万物可爱计划 / 狗狗冲锋衣</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li></ul></div></div></div></td></tr><tr class="main"><td>2</td><td><b>雪纳瑞衣服</b></td><td class="mono">0.8148</td><td class="mono">0.2071</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.6153</td><td class="mono score">0.5649</td><td><span class="pill p-watch">观察期</span></td><td>小成本素材测试</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2444</span><span class="cc">受众质量 +0.0621</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0308</span><span class="cc total">TrendScore = 0.5649</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>雪纳瑞 / 萌宠出道计划 / 人宠穿搭 / 宠物衣服 / ootd</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>3</td><td><b>狗狗衣服</b></td><td class="mono">0.8257</td><td class="mono">0.1712</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.5563</td><td class="mono score">0.5603</td><td><span class="pill p-watch">观察期</span></td><td>小成本素材测试</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>96</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2477</span><span class="cc">受众质量 +0.0514</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0278</span><span class="cc total">TrendScore = 0.5603</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>萌宠出道计划 / 狗狗衣服 / 宠物衣服 / 比熊 / 萌宠好物</div><div class="risk"><span class="dl">风险</span><ul><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>4</td><td><b>无毛猫衣服</b></td><td class="mono">0.8444</td><td class="mono">0.2031</td><td class="mono">0.7500</td><td class="mono">0.7937</td><td class="mono">0.5319</td><td class="mono score">0.5567</td><td><span class="pill p-watch">观察期</span></td><td>小成本素材测试</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2533</span><span class="cc">受众质量 +0.0609</span><span class="cc">风格迁移 +0.1500</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0266</span><span class="cc total">TrendScore = 0.5567</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>斯芬克斯无毛猫 / 无毛猫 / 萌宠出道计划 / 猫咪衣服 / 宠物衣服</div><div class="risk"><span class="dl">风险</span><ul><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>5</td><td><b>宠物法式</b></td><td class="mono">0.8261</td><td class="mono">0.2056</td><td class="mono">0.8000</td><td class="mono">0.7937</td><td class="mono">0.6764</td><td class="mono score">0.5548</td><td><span class="pill p-watch">观察期</span></td><td>小成本素材测试</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>25</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2478</span><span class="cc">受众质量 +0.0617</span><span class="cc">风格迁移 +0.1600</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0338</span><span class="cc total">TrendScore = 0.5548</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>法斗 / 宠物穿搭 / 比熊 / 萌宠出道计划 / 猫咪</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>6</td><td><b>宠物缎面公主裙</b></td><td class="mono">0.5996</td><td class="mono">0.3495</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.6933</td><td class="mono score">0.5391</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>22</div><div><span class="dl">淘宝</span>50</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1799</span><span class="cc">受众质量 +0.1048</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0347</span><span class="cc total">TrendScore = 0.5391</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>宠物衣服 / 马尔济斯 / 小狗也要穿公主裙 / 萌宠 / 宠物礼服</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li><li>短期网红梗属性强，存在快速衰退/高退货风险</li></ul></div></div></div></td></tr><tr class="main"><td>7</td><td><b>宠物小香风</b></td><td class="mono">0.6000</td><td class="mono">0.2035</td><td class="mono">0.9000</td><td class="mono">0.7937</td><td class="mono">0.7694</td><td class="mono score">0.5017</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1800</span><span class="cc">受众质量 +0.0610</span><span class="cc">风格迁移 +0.1800</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0385</span><span class="cc total">TrendScore = 0.5017</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>萌宠好物 / 狗狗衣服 / 宠物衣服 / 萌宠日常记录 / 萌宠出道计划</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>8</td><td><b>宠物拜年服</b></td><td class="mono">0.6000</td><td class="mono">0.2504</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.8542</td><td class="mono score">0.5015</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1800</span><span class="cc">受众质量 +0.0751</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0427</span><span class="cc total">TrendScore = 0.5015</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>宠物衣服 / 萌宠出道计划 / 狗狗新年衣服 / 狗狗衣服 / 萌宠穿搭</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li><li>短期网红梗属性强，存在快速衰退/高退货风险</li></ul></div></div></div></td></tr><tr class="main"><td>9</td><td><b>约克夏衣服</b></td><td class="mono">0.5190</td><td class="mono">0.2234</td><td class="mono">0.9000</td><td class="mono">0.7937</td><td class="mono">0.5747</td><td class="mono score">0.4931</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1557</span><span class="cc">受众质量 +0.0670</span><span class="cc">风格迁移 +0.1800</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0287</span><span class="cc total">TrendScore = 0.4931</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>约克夏 / 宠物穿搭 / 萌宠好物 / 狗狗穿搭 / 宠物衣服</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>10</td><td><b>马尔济斯衣服</b></td><td class="mono">0.6197</td><td class="mono">0.1608</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.6250</td><td class="mono score">0.4920</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1859</span><span class="cc">受众质量 +0.0482</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0312</span><span class="cc total">TrendScore = 0.4920</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>马尔济斯 / 萌宠出道计划 / 萌宠日常记录 / 宠物衣服 / 萌宠</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>11</td><td><b>宠物护肚针织毛衣</b></td><td class="mono">0.5887</td><td class="mono">0.2696</td><td class="mono">0.7500</td><td class="mono">0.7937</td><td class="mono">0.7567</td><td class="mono score">0.4887</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>50</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1766</span><span class="cc">受众质量 +0.0809</span><span class="cc">风格迁移 +0.1500</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0378</span><span class="cc total">TrendScore = 0.4887</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>宠物衣服 / 狗狗衣服 / 萌宠好物 / 缝纫日常 / 宠物毛衣</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>12</td><td><b>宠物西装礼服</b></td><td class="mono">0.4709</td><td class="mono">0.2692</td><td class="mono">0.9000</td><td class="mono">0.7937</td><td class="mono">0.6861</td><td class="mono score">0.4868</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1413</span><span class="cc">受众质量 +0.0808</span><span class="cc">风格迁移 +0.1800</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0343</span><span class="cc total">TrendScore = 0.4868</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>狗狗衣服 / 萌宠出道计划 / 西装杀 / 西高地 / 宠物服饰</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>13</td><td><b>宠物婚纱</b></td><td class="mono">0.6000</td><td class="mono">0.1869</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.8472</td><td class="mono score">0.4828</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1800</span><span class="cc">受众质量 +0.0561</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0424</span><span class="cc total">TrendScore = 0.4828</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>萌宠 / 宠物 / 狗狗 / 宠物衣服 / 狗狗穿搭</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li><li>短期网红梗属性强，存在快速衰退/高退货风险</li></ul></div></div></div></td></tr><tr class="main"><td>14</td><td><b>宠物四脚羽绒服</b></td><td class="mono">0.4761</td><td class="mono">0.2615</td><td class="mono">0.7500</td><td class="mono">0.8500</td><td class="mono">0.5125</td><td class="mono score">0.4732</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1428</span><span class="cc">受众质量 +0.0785</span><span class="cc">风格迁移 +0.1500</span><span class="cc">可行性 +0.1275</span><span class="cc">噪声衰减 −-0.0256</span><span class="cc total">TrendScore = 0.4732</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>宠物衣服 / 狗狗衣服 / 萌宠好物 / 宠物羽绒服 / 手作diy</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li></ul></div></div></div></td></tr><tr class="main"><td>15</td><td><b>宠物衣服</b></td><td class="mono">0.8052</td><td class="mono">0.2532</td><td class="mono">0.3000</td><td class="mono">0.7937</td><td class="mono">0.4712</td><td class="mono score">0.4730</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>192</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2416</span><span class="cc">受众质量 +0.0760</span><span class="cc">风格迁移 +0.0600</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0236</span><span class="cc total">TrendScore = 0.4730</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>萌宠出道计划 / 萌宠日常记录 / 狗狗衣服 / 宠物衣服 / 缝纫日常</div><div class="risk"><span class="dl">风险</span><ul><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>16</td><td><b>宠物新中式</b></td><td class="mono">0.3308</td><td class="mono">0.3309</td><td class="mono">0.9000</td><td class="mono">0.7937</td><td class="mono">0.5844</td><td class="mono score">0.4683</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.0992</span><span class="cc">受众质量 +0.0993</span><span class="cc">风格迁移 +0.1800</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0292</span><span class="cc total">TrendScore = 0.4683</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>新中式 / 万物可爱计划 / 宠物穿搭 / 狗狗穿搭 / 德文卷毛猫</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>17</td><td><b>宠物老钱风</b></td><td class="mono">0.5203</td><td class="mono">0.1726</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.6917</td><td class="mono score">0.4624</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1561</span><span class="cc">受众质量 +0.0518</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0346</span><span class="cc total">TrendScore = 0.4624</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>老钱风 / 萌宠出道计划 / 老钱风穿搭 / 成都宠物 / 老钱风萌宠</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li><li>短期网红梗属性强，存在快速衰退/高退货风险</li></ul></div></div></div></td></tr><tr class="main"><td>18</td><td><b>德文猫衣服</b></td><td class="mono">0.5840</td><td class="mono">0.0950</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.6208</td><td class="mono score">0.4617</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1752</span><span class="cc">受众质量 +0.0285</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0310</span><span class="cc total">TrendScore = 0.4617</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30~60 天（发布加速中）</div><div><span class="dl">素材关键词</span>德文卷毛猫 / 我和我的猫 / 萌宠出道计划 / 德文 / 万物可爱计划</div><div class="risk"><span class="dl">风险</span><ul><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>19</td><td><b>宠物羽绒马甲</b></td><td class="mono">0.3413</td><td class="mono">0.3142</td><td class="mono">0.8000</td><td class="mono">0.8500</td><td class="mono">0.4611</td><td class="mono score">0.4611</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1024</span><span class="cc">受众质量 +0.0943</span><span class="cc">风格迁移 +0.1600</span><span class="cc">可行性 +0.1275</span><span class="cc">噪声衰减 −-0.0231</span><span class="cc total">TrendScore = 0.4611</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>宠物衣服 / 狗狗衣服 / 萌宠好物 / 萌宠 / 狗狗羽绒服</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li></ul></div></div></div></td></tr><tr class="main"><td>20</td><td><b>宠物洛丽塔裙</b></td><td class="mono">0.4952</td><td class="mono">0.1935</td><td class="mono">0.8500</td><td class="mono">0.7937</td><td class="mono">0.8163</td><td class="mono score">0.4549</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>50</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1486</span><span class="cc">受众质量 +0.0580</span><span class="cc">风格迁移 +0.1700</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0408</span><span class="cc total">TrendScore = 0.4549</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>宠物衣服 / lolita / 宠物洛丽塔连衣裙 / 自制小裙子 / 猫咪狗狗</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li><li>短期网红梗属性强，存在快速衰退/高退货风险</li></ul></div></div></div></td></tr><tr class="main"><td>21</td><td><b>宠物加绒连帽卫衣</b></td><td class="mono">0.4972</td><td class="mono">0.2677</td><td class="mono">0.6500</td><td class="mono">0.7937</td><td class="mono">0.6600</td><td class="mono score">0.4455</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>50</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.1492</span><span class="cc">受众质量 +0.0803</span><span class="cc">风格迁移 +0.1300</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0330</span><span class="cc total">TrendScore = 0.4455</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>宠物衣服 / 狗狗衣服 / 萌宠好物 / 萌宠 / 萌宠出道计划</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>22</td><td><b>宠物四脚防水雨衣</b></td><td class="mono">0.7946</td><td class="mono">0.1453</td><td class="mono">0.3000</td><td class="mono">0.7937</td><td class="mono">0.6625</td><td class="mono score">0.4279</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>48</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.2384</span><span class="cc">受众质量 +0.0436</span><span class="cc">风格迁移 +0.0600</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0331</span><span class="cc total">TrendScore = 0.4279</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>未来 30 天内（加速 + 互动背离双高，接近爆发）</div><div><span class="dl">素材关键词</span>狗狗雨衣 / 萌宠出道计划 / 雨天遛狗 / 萌宠好物 / 萌宠</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li></ul></div></div></div></td></tr><tr class="main"><td>23</td><td><b>宠物JK制服</b></td><td class="mono">0.3093</td><td class="mono">0.2082</td><td class="mono">0.8200</td><td class="mono">0.7937</td><td class="mono">0.8600</td><td class="mono score">0.3953</td><td><span class="pill p-mature">成熟期</span></td><td>谨慎入场</td></tr><tr class="detail"><td colspan="10"><div class="dbox"><div class="dgrid"><div><span class="dl">抖音</span>23</div><div><span class="dl">淘宝</span>50</div><div><span class="dl">B站</span>40</div><div><span class="dl">1688</span>299</div></div><div class="dcal"><span class="cc">增长动能 +0.0928</span><span class="cc">受众质量 +0.0625</span><span class="cc">风格迁移 +0.1640</span><span class="cc">可行性 +0.1191</span><span class="cc">噪声衰减 −-0.0430</span><span class="cc total">TrendScore = 0.3953</span></div><div class="dmeta"><div><span class="dl">爆发窗口</span>60~90 天（尚在积累期）</div><div><span class="dl">素材关键词</span>jk制服 / 宠物衣服 / jk / 狗狗衣服 / 萌宠好物</div><div class="risk"><span class="dl">风险</span><ul><li>同类卖家密集，内卷度高</li><li>低价铺货占比高，价格带易被拉低</li><li>短期网红梗属性强，存在快速衰退/高退货风险</li></ul></div></div></div></td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">点击任意行展开该词的「数据源数量 + 加权贡献明细 + 爆发窗口 + 风险 + 素材关键词」。</p>
+  </section>
+
+  <div class="footer">Z.paw 宠物趋势预测量化模型 · 阶段一复合加权 · 数据时间 2026-08-16</div>
+</div>
+<script>
+  document.querySelectorAll('table.main tr.main').forEach(function(tr){
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', function(){
+      var n = tr.nextElementSibling;
+      if (n && n.classList.contains('detail')) n.style.display = n.style.display === 'none' ? '' : 'none';
+    });
+  });
+  document.querySelectorAll('tr.detail').forEach(function(tr){ tr.style.display = 'none'; });
+</script>
+</body>
+
+</html>

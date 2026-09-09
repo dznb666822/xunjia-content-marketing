@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Z.paw 宠物服饰趋势预测量化模型</title>
+<style>
+  :root {
+    --bg: #faf6ef;
+    --card: #ffffff;
+    --ink: #2b2320;
+    --muted: #7a6f66;
+    --brand: #1f3d34;
+    --brand-soft: #e8efe9;
+    --gold: #b8860b;
+    --gold-soft: #f5ecd8;
+    --line: #ece4d8;
+    --red: #b3472f;
+    --green: #2e7d4f;
+    --blue: #2f5f8f;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 28px 80px; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1f3d34 0%, #2c5447 55%, #3a6a58 100%);
+    color: #fff;
+    border-radius: 20px;
+    padding: 52px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -80px; top: -80px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(184,134,11,.35), transparent 70%);
+    border-radius: 50%;
+  }
+  .hero .brand {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #e8d6a8;
+    border: 1px solid rgba(232,214,168,.5);
+    padding: 5px 14px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+  .hero h1 { font-size: 34px; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; }
+  .hero p.sub { font-size: 16px; color: #d7e4dd; max-width: 640px; }
+  .hero .tags { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .hero .tag {
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.18);
+    padding: 6px 14px; border-radius: 999px; font-size: 13px;
+  }
+
+  /* Section */
+  section { margin-top: 46px; }
+  h2 {
+    font-size: 22px; color: var(--brand);
+    padding-bottom: 10px; margin-bottom: 22px;
+    border-bottom: 2px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .no {
+    background: var(--brand); color: #fff;
+    width: 28px; height: 28px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; flex: none;
+  }
+
+  /* Formula */
+  .formula-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    box-shadow: 0 6px 24px rgba(43,35,32,.05);
+  }
+  .formula {
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 19px; font-weight: 600;
+    color: var(--brand);
+    letter-spacing: .5px;
+  }
+  .formula .w { color: var(--gold); }
+  .formula-note { margin-top: 10px; color: var(--muted); font-size: 14px; }
+
+  /* Weight bars */
+  .weights { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 20px; }
+  .w-item {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 14px; text-align: center;
+  }
+  .w-item .pct { font-size: 24px; font-weight: 700; color: var(--brand); }
+  .w-item .nm { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .w-item .bar { height: 6px; border-radius: 999px; background: var(--line); margin-top: 10px; overflow: hidden; }
+  .w-item .bar i { display: block; height: 100%; background: var(--gold); }
+
+  /* Factor cards */
+  .factor {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 18px rgba(43,35,32,.04);
+  }
+  .factor-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .factor-head .name { font-size: 17px; font-weight: 700; color: var(--ink); }
+  .factor-head .weight {
+    background: var(--gold-soft); color: var(--gold);
+    font-weight: 700; padding: 2px 10px; border-radius: 999px; font-size: 13px;
+  }
+  .factor .src { color: var(--muted); font-size: 13px; margin: 6px 0 12px; }
+  .subs { list-style: none; }
+  .subs li {
+    position: relative; padding: 6px 0 6px 22px;
+    font-size: 14px; color: var(--ink);
+    border-bottom: 1px dashed var(--line);
+  }
+  .subs li:last-child { border-bottom: none; }
+  .subs li::before {
+    content: ""; position: absolute; left: 4px; top: 14px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
+  }
+  .subs li b { font-weight: 600; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 1px 7px; border-radius: 5px; margin-left: 6px; vertical-align: 1px;
+  }
+  .b-crawl { background: #e5f2ea; color: var(--green); }
+  .b-ai { background: #e7eef6; color: var(--blue); }
+  .b-kb { background: #f3ecdd; color: var(--gold); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 4px 18px rgba(43,35,32,.04); }
+  th, td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--line); }
+  th { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .p-high { background: #e5f2ea; color: var(--green); }
+  .p-watch { background: #f5ecd8; color: var(--gold); }
+  .p-mature { background: #e7eef6; color: var(--blue); }
+  .p-drop { background: #f6e4df; color: var(--red); }
+
+  /* Output */
+  .output-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .out-item {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .out-item .idx { color: var(--gold); font-weight: 700; font-size: 13px; }
+  .out-item .t { font-weight: 700; margin-top: 4px; }
+  .out-item .d { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* Roadmap */
+  .road { display: flex; flex-direction: column; gap: 14px; }
+  .road-item { display: flex; gap: 16px; align-items: flex-start; }
+  .road-item .dot {
+    flex: none; width: 40px; height: 40px; border-radius: 12px;
+    background: var(--brand); color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .road-item .dot.done { background: var(--green); }
+  .road-item .body { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; flex: 1; }
+  .road-item .body .t { font-weight: 700; }
+  .road-item .body .d { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .footer { margin-top: 56px; text-align: center; color: var(--muted); font-size: 13px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) {
+    .weights { grid-template-columns: repeat(2, 1fr); }
+    .output-grid, .grid-2 { grid-template-columns: 1fr; }
+    .hero { padding: 36px 26px; }
+    .hero h1 { font-size: 26px; }
+    .formula { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Hero -->
+  <div class="hero">
+    <span class="brand">Z.paw · Pet Couture</span>
+    <h1>宠物服饰趋势预测量化模型</h1>
+    <p class="sub">面向高端宠物服装品牌 Z.paw（客单价 1500 元）的冷启动选品决策引擎：以「抖音 + 淘宝」硬数据打底，「B站 + 1688」跨平台与供应链增强，「AI + 知识库」兜底，输出可执行的趋势评分与选品建议。</p>
+    <div class="tags">
+      <span class="tag">五因子复合加权</span>
+      <span class="tag">TrendScore 0~1</span>
+      <span class="tag">阶段 A/B 已落地</span>
+      <span class="tag">高端化导向</span>
+    </div>
+  </div>
+
+  <!-- 1 核心公式 -->
+  <section>
+    <h2><span class="no">1</span>核心评分公式</h2>
+    <div class="formula-card">
+      <div class="formula">TrendScore = <span class="w">0.30</span>·增长动能 + <span class="w">0.30</span>·受众质量 + <span class="w">0.20</span>·风格迁移 + <span class="w">0.15</span>·可行性 − <span class="w">0.05</span>·噪声衰减</div>
+      <div class="formula-note">所有因子归一化到 0~1；噪声衰减为负向扣分项。分数越高代表「越接近爆发、越适合高端切入、供应链越可落地」。</div>
+      <div class="weights">
+        <div class="w-item"><div class="pct">30%</div><div class="nm">增长动能</div><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="w-item"><div class="pct">30%</div><div class="nm">受众质量</div><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="w-item"><div class="pct">20%</div><div class="nm">风格迁移</div><div class="bar"><i style="width:66%"></i></div></div>
+        <div class="w-item"><div class="pct">15%</div><div class="nm">可行性</div><div class="bar"><i style="width:50%"></i></div></div>
+        <div class="w-item"><div class="pct">−5%</div><div class="nm">噪声衰减</div><div class="bar"><i style="width:17%"></i></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 五因子 -->
+  <section>
+    <h2><span class="no">2</span>五因子详解</h2>
+
+    <div class="factor">
+      <div class="factor-head"><span class="name">① 增长动能</span><span class="weight">权重 0.30</span></div>
+      <div class="src">数据源：抖音搜索作品（按 create_time 分桶）+ B站公开搜索接口</div>
+      <ul class="subs">
+        <li><b>作品发布量环比增速</b> — 近 7 天 vs 前 7 天发布量对比 <span class="badge b-crawl">采集</span></li>
+        <li><b>7/14 日加速度</b> — 发布量二阶差分，捕捉「正在加速」的信号 <span class="badge b-crawl">采集</span></li>
+        <li><b>互动-发布背离度</b> — 互动增速 − 发布增速，互动涨而内容少 = 早期红利 <span class="badge b-crawl">采集</span></li>
+        <li><b>新达人入局增长率</b> — 近 7 天新作者占全部作者比例 <span class="badge b-crawl">采集</span></li>
+        <li><b>B站跨平台热度</b> — 视频数量 + 平均播放量对数归一 <span class="badge b-crawl">采集</span></li>
+      </ul>
+    </div>
+
+    <div class="factor">
+      <div class="factor-head"><span class="name">② 受众质量</span><span class="weight">权重 0.30</span></div>
+      <div class="src">数据源：抖音作者粉丝层级 + 淘宝价格分布</div>
+      <ul class="subs">
+        <li><b>作者粉丝层级</b> — 高粉作者（≥1w）占比 + 平均粉丝对数 <span class="badge b-crawl">采集</span></li>
+        <li><b>高客单笔记占比</b> — 标题命中「高定/定制/轻奢/重工/手工/原创设计」 <span class="badge b-crawl">采集</span></li>
+        <li><b>正向需求密度</b> — 文案命中「求/想要/链接/多少钱/种草」等 <span class="badge b-crawl">采集</span></li>
+        <li><b>求购意图密度</b> — 需求密度 × 0.8，衡量购买转化意愿 <span class="badge b-crawl">采集</span></li>
+        <li><b>低价流量占比（反向）</b> — 淘宝 &lt;100 元商品占比越低越优 <span class="badge b-crawl">采集</span></li>
+      </ul>
+    </div>
+
+    <div class="factor">
+      <div class="factor-head"><span class="name">③ 风格迁移</span><span class="weight">权重 0.20</span></div>
+      <div class="src">数据源：豆包 Seed 2.0（AI）+ 面料知识库静态映射</div>
+      <ul class="subs">
+        <li><b>人→宠迁移适配度</b> — AI 评估「人类时尚元素迁移到高端宠物服饰」的适配度（0~1）<span class="badge b-ai">AI</span></li>
+        <li><b>静态兜底</b> — 关键词命中知识库「人→宠」高适配元素 <span class="badge b-kb">知识库</span></li>
+      </ul>
+    </div>
+
+    <div class="factor">
+      <div class="factor-head"><span class="name">④ 可行性</span><span class="weight">权重 0.15</span></div>
+      <div class="src">数据源：面料知识库 + 1688 供应商数量（RPA）</div>
+      <ul class="subs">
+        <li><b>面料可采购性</b> — 知识库采购难度评级，有 1688 供应商硬数据时覆盖 <span class="badge b-kb">知识库</span><span class="badge b-crawl">采集</span></li>
+        <li><b>工艺难度 / 工期</b> — 知识库评级（低/中/高） <span class="badge b-kb">知识库</span></li>
+        <li><b>成本区间适配</b> — 高端面料占比 vs 1500 客单可承受 <span class="badge b-kb">知识库</span></li>
+        <li><b>宠物版型改造适配</b> — 版型可调节性（静态中上） <span class="badge b-kb">知识库</span></li>
+      </ul>
+    </div>
+
+    <div class="factor">
+      <div class="factor-head"><span class="name">⑤ 噪声衰减</span><span class="weight">权重 −0.05（负向）</span></div>
+      <div class="src">数据源：淘宝店铺去重 + 价格分布 + AI</div>
+      <ul class="subs">
+        <li><b>卖家数量 / 内卷度</b> — 淘宝同款店铺去重比例越高越内卷 <span class="badge b-crawl">采集</span></li>
+        <li><b>低价铺货占比</b> — 淘宝 &lt;100 元占比 <span class="badge b-crawl">采集</span></li>
+        <li><b>72h 网红梗 / 退货风险</b> — AI 评估短期梗的快速衰退风险 <span class="badge b-ai">AI</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 3 数据源 -->
+  <section>
+    <h2><span class="no">3</span>数据源架构</h2>
+    <table>
+      <thead>
+        <tr><th>平台</th><th>采集方式</th><th>接入因子</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>抖音</td><td>dy_apis.douyin_api（搜索作品 + 作者粉丝 get_user_info 二次查询）</td><td>增长动能 / 受众质量</td><td><span class="pill p-high">✅ 已接入</span></td></tr>
+        <tr><td>淘宝</td><td>services.price_research RPA（商品名/价格/店铺/付款人数）</td><td>受众质量 / 噪声衰减</td><td><span class="pill p-high">✅ 已接入</span></td></tr>
+        <tr><td>B站</td><td>公开搜索接口（匿名 + buvid）</td><td>增长动能 → 跨平台热度</td><td><span class="pill p-high">✅ 已接入</span></td></tr>
+        <tr><td>1688</td><td>MarketSpider RPA（供应商/价格，需 cookie）</td><td>可行性 → 面料可采购性</td><td><span class="pill p-high">✅ 已接入</span></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px; color:var(--muted); font-size:13px;">数据可得性分级：<span class="badge b-crawl">✅ 采集</span> 可直接拿到硬数据；<span class="badge b-ai">🔧 AI</span> 由豆包估计（失败回退静态值）；<span class="badge b-kb">📚 知识库</span> 静态评级。拿不到真实数据的因子（如关键词搜索量、加购量、播放量）已被剔除，不进入公式。</p>
+  </section>
+
+  <!-- 4 阈值判定 -->
+  <section>
+    <h2><span class="no">4</span>TrendScore 阈值判定</h2>
+    <table>
+      <thead>
+        <tr><th>分数区间</th><th>生命周期</th><th>建议动作</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="pill p-high">&gt; 0.75</span></td><td>萌芽 / 高潜力早期</td><td>优先立项</td></tr>
+        <tr><td><span class="pill p-watch">0.55 ~ 0.75</span></td><td>观察期</td><td>小成本素材测试</td></tr>
+        <tr><td><span class="pill p-mature">0.35 ~ 0.55</span></td><td>成熟期</td><td>谨慎入场</td></tr>
+        <tr><td><span class="pill p-drop">&lt; 0.35</span></td><td>衰退 / 伪趋势</td><td>放弃</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 5 输出结构 -->
+  <section>
+    <h2><span class="no">5</span>七项输出结构</h2>
+    <div class="output-grid">
+      <div class="out-item"><div class="idx">01</div><div class="t">趋势名称 &amp; 元素清单</div><div class="d">高频话题标签 + 命中的高端面料</div></div>
+      <div class="out-item"><div class="idx">02</div><div class="t">TrendScore</div><div class="d">0~1 复合评分（保留 4 位小数）</div></div>
+      <div class="out-item"><div class="idx">03</div><div class="t">生命周期</div><div class="d">萌芽 / 观察期 / 成熟期 / 衰退</div></div>
+      <div class="out-item"><div class="idx">04</div><div class="t">爆发窗口</div><div class="d">基于加速度 + 互动背离度的粗略判断</div></div>
+      <div class="out-item"><div class="idx">05</div><div class="t">高客单改造建议</div><div class="d">优先面料 + 可调节版型 + 原创/重工卖点</div></div>
+      <div class="out-item"><div class="idx">06</div><div class="t">风险提示</div><div class="d">内卷 / 低价 / 网红梗 / 样本不足</div></div>
+      <div class="out-item" style="grid-column:1/-1;"><div class="idx">07</div><div class="t">素材关键词</div><div class="d">Top 话题标签，直接用于投放与内容素材</div></div>
+    </div>
+  </section>
+
+  <!-- 6 双阶段路线 -->
+  <section>
+    <h2><span class="no">6</span>实施路线</h2>
+    <div class="road">
+      <div class="road-item">
+        <div class="dot done">A</div>
+        <div class="body">
+          <div class="t">阶段 A · 复合加权（冷启动，已完成）</div>
+          <div class="d">只用现有可得数据：抖音 + 淘宝硬数据打底，AI / 知识库兜底。config 配置 + features 因子计算 + model 加权 + output 七项输出。</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <div class="dot done">B</div>
+        <div class="body">
+          <div class="t">阶段 B · 补采集增强（已完成）</div>
+          <div class="d">新增 B站跨平台热度、1688 供应商可行性、23 个垂类词库分层（大盘 / 品类 / 风格 / 品种 / 场景）。</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <div class="dot">C</div>
+        <div class="body">
+          <div class="t">阶段 C · XGBoost 时序（待样本积累）</div>
+          <div class="d">trend_samples 落库，样本 ≥120 后启用时序模型，输出萌芽 / 上升 / 顶峰 / 衰退的完整生命周期，标签为未来 30/60 天真实涨幅。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 落地现状 -->
+  <section>
+    <h2><span class="no">7</span>当前落地现状</h2>
+    <div class="grid-2">
+      <div class="out-item">
+        <div class="t">关键词库</div>
+        <div class="d">23 个垂类词，按 5 维度分层：2 大盘基准 + 8 品类款式 + 5 风格 + 5 犬猫品种 + 3 场景功能。</div>
+      </div>
+      <div class="out-item">
+        <div class="t">数据采集</div>
+        <div class="d">抖音（搜索 + 作者粉丝二次查询）、淘宝 RPA（23 词已补全价格带）、B站（每词 2 页）、1688（299 商品 / 143 家供应商）。</div>
+      </div>
+      <div class="out-item">
+        <div class="t">硬性约束</div>
+        <div class="d">高客单优先（低价占比反向扣分）、人宠适配（风格迁移 + 版型改造）、趋势≠爆款（可行性独立加权）、正反两面（建议 + 风险）。</div>
+      </div>
+      <div class="out-item">
+        <div class="t">健壮性设计</div>
+        <div class="d">抖音频控空结果退避重试、淘宝/1688 平台数据隔离、AI 失败回退静态值、B站/1688 无数据回退中性值。</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">Z.paw 宠物服饰趋势预测量化模型 · 阶段一复合加权（冷启动）· 供内部选品决策参考</div>
+</div>
+</body>
+</html>

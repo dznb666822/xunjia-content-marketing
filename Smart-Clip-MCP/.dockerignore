@@ -1,0 +1,13 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+*.egg-info
+dist
+build
+.venv
+test-videos
+test-output
+技术方案.md
+.tmp

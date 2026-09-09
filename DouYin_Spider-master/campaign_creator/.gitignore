@@ -1,0 +1,76 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing & Coverage
+.pytest_cache/
+.pytest_cache/**
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.hypothesis/
+
+# Type Checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Code Quality
+.ruff_cache/
+.flake8
+.pylint.d/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Project Specific
+src/output/
+*.log
+logs/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary Files
+*.tmp
+*.bak
+*.backup
+.tmp/
+
+graphify-out/
