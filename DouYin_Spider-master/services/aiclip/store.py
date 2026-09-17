@@ -251,10 +251,23 @@ _EXTRA_COLUMNS = [
     # 需要补的是「这段从哪句台词、用哪个音色合成的」这几个溯源字段：
     ('audio_tracks', 'shot_seq', "INT NULL COMMENT '★对应参考脚本镜号 seq（TTS 清单的稳定键）'"),
     ('audio_tracks', 'text_content', "TEXT NULL COMMENT 'TTS 台词文本（= 该镜 subtitle_text，改了就要重生成）'"),
-    ('audio_tracks', 'voice_id', "VARCHAR(32) NULL COMMENT 'TTS 音色 id：中文女|中文男|英文女|英文男|日语男|韩语女|粤语女'"),
-    ('audio_tracks', 'speech_rate', "FLOAT NULL COMMENT 'TTS 语速倍率，默认 0.88（约 254 字/分）'"),
+    # ⚠️ 64 而不是 32：火山豆包的 speaker id 长这样
+    #    zh_female_shuangkuaisisi_uranus_bigtts（39 字符），32 会直接 DataError 1406。
+    #    列宽是「当时用谁」定的，换 provider 就得出事 —— 所以 _WIDEN_COLUMNS 兜底。
+    ('audio_tracks', 'voice_id', "VARCHAR(64) NULL COMMENT 'TTS 音色 id：火山 speaker（zh_female_xxx_bigtts）或 CosyVoice 名（中文女）'"),
+    ('audio_tracks', 'speech_rate', "FLOAT NULL COMMENT 'TTS 语速倍率（1.0 = 原速；火山侧换算成 speech_rate ∈ [-50,100]）'"),
     ('audio_tracks', 'gen_error', "VARCHAR(512) NULL COMMENT 'TTS 合成失败原因'"),
     ('audio_tracks', 'gen_at', "VARCHAR(32) NULL COMMENT 'TTS 合成完成时间'"),
+]
+
+# 历史列宽不够时**自动加宽**（幂等，只加宽不缩窄）。
+#   「补列」机制只管「这一列有没有」，不管「够不够宽」——
+#   而列宽往往是「当时用哪家引擎」决定的：P5c 首版音色是 CosyVoice 的「中文女」（3 字），
+#   VARCHAR(32) 绰绰有余；换成火山后 speaker 是 39 字符，写入直接
+#   `pymysql.err.DataError: (1406, "Data too long for column 'voice_id'")`。
+_WIDEN_COLUMNS = [
+    ('audio_tracks', 'voice_id', 64,
+     "VARCHAR(64) NULL COMMENT 'TTS 音色 id：火山 speaker（zh_female_xxx_bigtts）或 CosyVoice 名（中文女）'"),
 ]
 
 _CREATE_PROJECT_MATERIALS = """
@@ -290,6 +303,17 @@ def ensure_schema():
                 if row and int(row['n']) == 0:
                     execute('ALTER TABLE `{}` ADD COLUMN `{}` {}'.format(table, col, ddl))
                     logger.info('aiclip schema: 补列 {}.{}'.format(table, col))
+
+            for table, col, width, ddl in _WIDEN_COLUMNS:
+                r = query_one(
+                    "SELECT CHARACTER_MAXIMUM_LENGTH AS n FROM information_schema.COLUMNS "
+                    "WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s AND COLUMN_NAME=%s",
+                    [_MYSQL_DB, table, col])
+                cur_w = r.get('n') if r else None
+                if cur_w is not None and int(cur_w) < width:
+                    execute('ALTER TABLE `{}` MODIFY COLUMN `{}` {}'.format(table, col, ddl))
+                    logger.info('aiclip schema: 加宽 {}.{} 字符长度 {} -> {}'.format(
+                        table, col, cur_w, width))
 
             row = query_one(
                 "SELECT COUNT(*) AS n FROM information_schema.STATISTICS "

@@ -5,7 +5,7 @@
 
     <store_root>/assets/<xx>/<sha1>.<ext>    原素材，xx = sha1 前两位分桶
     <store_root>/thumbs/<xx>/<sha1>.jpg      缩略图
-    <store_root>/tts/<pid>/<track_id>.wav    TTS 旁白（一镜一段，见文件末尾）
+    <store_root>/tts/<pid>/<track_id>.<ext>  TTS 旁白（一镜一段，见文件末尾）
 
 扫描来源目录（宿主机 `D:/aiclip_inbox` 挂载到容器 `/app/aiclip_inbox`）：
 
@@ -64,16 +64,32 @@ def thumb_url(sha1):
 
 # ---------------------------------------------------------------------------
 # TTS 语音（P5c）
-#   一镜一段旁白，按项目分目录：<store_root>/tts/<pid>/<track_id>.wav
+#   一镜一段旁白，按项目分目录：<store_root>/tts/<pid>/<track_id>.<ext>
 #   文件名用 audio_tracks.id（不是 seq）：重新生成 = 覆盖同一路径，
 #   所以 URL 要带 ?v=<updated_at> 破缓存，否则浏览器一直播旧音频。
+#   ⚠️ 扩展名由 TTS provider 决定（火山 mp3 / CosyVoice wav），**不是常量** ——
+#      所以读的时候用 find_tts_file() 扫目录，别拼扩展名：换过 provider
+#      的项目里会同时存在新旧两种扩展名，拼错了就是「文件明明在却 404」。
 # ---------------------------------------------------------------------------
 def tts_dir(pid):
     return os.path.join(store_root(), 'tts', str(pid or '_orphan'))
 
 
-def tts_path(pid, tid):
-    return os.path.join(tts_dir(pid), '{}.wav'.format(tid))
+def tts_path(pid, tid, ext='mp3'):
+    ext = (ext or 'mp3').lstrip('.').lower() or 'mp3'
+    return os.path.join(tts_dir(pid), '{}.{}'.format(tid, ext))
+
+
+def find_tts_file(pid, tid):
+    """按 track_id 在项目 TTS 目录里找实际文件（扩展名未知，扫目录）。"""
+    d = tts_dir(pid)
+    if not os.path.isdir(d):
+        return None
+    prefix = str(tid) + '.'
+    for name in os.listdir(d):
+        if name.startswith(prefix):
+            return os.path.join(d, name)
+    return None
 
 
 def tts_url(tid):

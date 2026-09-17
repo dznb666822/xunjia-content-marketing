@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """AI 剪辑 · TTS 语音线（P5c）。
 
-链路：参考脚本的「台词」→ 一镜一段旁白 → CosyVoice 合成 → `audio_tracks` 落库 + wav 落盘。
+链路：参考脚本的「台词」→ 一镜一段旁白 → TTS 合成 → `audio_tracks` 落库 + 音频落盘。
+合成引擎走 `services/tts.py` 门面（默认**火山引擎豆包语音合成大模型**，见 `tts_volc.py`；
+本机 CosyVoice 是退路）。本模块不关心是谁在念，只关心「哪一镜、念什么、念好了没」。
 
 爸爸的原话：
     「再给加一个子页面用来生成 tts 的语音」
@@ -47,8 +49,9 @@ STATUS_GENERATING = 'generating'
 STATUS_DONE = 'done'
 STATUS_FAILED = 'failed'
 
-# 单段台词上限（提示线，不阻断）。CosyVoice-300M-SFT 对超长文本不稳，
-# 一镜台词超过这个字数时前端会标出来，建议回参考脚本里把这一镜拆开。
+# 单段台词上限（提示线，不阻断）。超过这个字数时前端会标出来，
+# 建议回参考脚本里把这一镜拆开 —— 一镜一两句话才是短视频该有的节奏，
+# 而且长了 TTS 也容易在语气上「念成一整段」而不是「一句一句说」。
 MAX_CHARS = 300
 
 
@@ -229,9 +232,11 @@ def preview(pid):
         # 已落库、但参考脚本里已经没有的镜（参考脚本重生成过、还没重新导出）
         'orphan_seqs': sorted(k for k in tracks if k not in seen),
         'voices': tts_svc.get_voice_library(),
-        'default_voice': tts_svc.DEFAULT_VOICE,
-        'default_rate': tts_svc.DEFAULT_RATE,
+        'default_voice': tts_svc.default_voice(),
+        'default_rate': tts_svc.default_rate(),
         'max_chars': MAX_CHARS,
+        # 当前 TTS 供应商 + 配置状态（前端拿它显示「凭据没配」的告警横幅）
+        'provider': tts_svc.status(),
         'batch': batch_state(pid),
     }
 
@@ -240,8 +245,13 @@ def preview(pid):
 # 写：导出（参考脚本台词 → audio_tracks，幂等）
 # ---------------------------------------------------------------------------
 def drop_file(pid, tid):
-    fp = paths.tts_path(pid, tid)
-    if os.path.isfile(fp):
+    """删掉这一段的音频文件。
+
+    扩展名随 TTS provider 变（火山 mp3 / CosyVoice wav），**不能拼** ——
+    换过 provider 的项目里新旧两种扩展名会同时存在，拼错了就是「文件在却删不掉」。
+    """
+    fp = paths.find_tts_file(pid, tid)
+    if fp and os.path.isfile(fp):
         try:
             os.remove(fp)
         except OSError as e:
@@ -283,8 +293,8 @@ def sync(pid, owner_id=None):
                 'duration': 0,
                 'start_offset': 0,
                 'is_ai_generated': 1,
-                'voice_id': tts_svc.DEFAULT_VOICE,
-                'speech_rate': tts_svc.DEFAULT_RATE,
+                'voice_id': tts_svc.default_voice(),
+                'speech_rate': tts_svc.default_rate(),
                 'status': STATUS_PENDING,
                 'sort_order': seq,
                 'source_material_id': ln.get('material_id'),
@@ -307,6 +317,20 @@ def sync(pid, owner_id=None):
             patch['shot_id'] = ln.get('shot_id')
         if (cur.get('source_material_id') or None) != (ln.get('material_id') or None):
             patch['source_material_id'] = ln.get('material_id')
+        # ★ 换过 TTS provider 之后，老行的 voice_id（例如 CosyVoice 的「中文女」）
+        #   在新 provider 的音色库里根本不存在 → 整行参数都作废，重置为当前默认。
+        #   连 speech_rate 一起重置：0.88 在 CosyVoice 是「254 字/分」，
+        #   在火山是另一个含义，留着就是两边不讨好的中间值。
+        #   这和「台词改了就作废旧音频」是同一条规矩：**参数变了，结果就不能留**。
+        if cur.get('voice_id') and not tts_svc.has_voice(cur['voice_id']):
+            patch['voice_id'] = tts_svc.default_voice()
+            patch['speech_rate'] = tts_svc.default_rate()
+            if cur.get('status') in (STATUS_DONE, STATUS_FAILED):
+                # failed 也要清：那条错误是上一家引擎报的，换引擎后它已经不准了，
+                # 留着只会让人以为「新引擎也失败」。
+                drop_file(pid, cur['id'])
+                patch.update({'url': None, 'duration': 0, 'gen_at': None,
+                              'status': STATUS_PENDING, 'gen_error': None})
         if patch:
             patch['updated_at'] = now
             store.update('audio_tracks', cur['id'], patch)
@@ -341,23 +365,10 @@ def audio_duration(fp):
 def friendly_error(e):
     """把底层异常翻译成「看得懂 + 知道去哪儿修」的话。
 
-    最常见的那个（CosyVoice 没起）值得单独说清楚：容器要连宿主机的
-    `host.docker.internal:50000`，而那个服务得在 WSL 里手工跑。
+    各 provider 的文案在 `services/tts.py::friendly_error` 里 —— 因为「没配凭据」
+    和「CosyVoice 没起」这两种最常见故障，修法完全不同，只有那一层知道是谁在合成。
     """
-    name = type(e).__name__
-    s = str(e)
-    url = tts_svc.TTS_SERVICE_URL
-    low = s.lower()
-    if ('connectionerror' in name.lower() or 'newconnectionerror' in name.lower()
-            or 'refused' in low or '拒绝' in s or '无法连接' in s
-            or 'name resolution' in low or 'getaddrinfo' in low):
-        return ('CosyVoice 服务连不上（{}）—— 需要在 WSL 里把 '
-                'custom_server.py 跑起来（监听 0.0.0.0:50000）。'.format(url))
-    if 'timeout' in name.lower() or 'timed out' in low:
-        return 'CosyVoice 响应超时（{}）—— 合成排队太长或服务卡住，稍后重试。'.format(url)
-    if 'httperror' in name.lower():
-        return 'CosyVoice 返回错误（{}）：{}'.format(url, s[:200])
-    return '合成失败：{}'.format(s[:300])
+    return tts_svc.friendly_error(e)
 
 
 def generate_one(pid, track, voice=None, rate=None, force=False):
@@ -373,17 +384,22 @@ def generate_one(pid, track, voice=None, rate=None, force=False):
     if track.get('status') == STATUS_DONE and track.get('url') and not force:
         return track                     # 已经好了，别重复烧算力
 
-    voice = (voice or '').strip() or track.get('voice_id') or tts_svc.DEFAULT_VOICE
+    voice = (voice or '').strip() or track.get('voice_id') or tts_svc.default_voice()
+    if not tts_svc.has_voice(voice):
+        # 换过 provider 的老行（或前端传了不存在的音色）→ 落回当前默认，别拿无效音色去烧接口
+        voice = tts_svc.default_voice()
     try:
         rate = float(rate if rate not in (None, '') else
-                     (track.get('speech_rate') or tts_svc.DEFAULT_RATE))
+                     (track.get('speech_rate') or tts_svc.default_rate()))
     except (TypeError, ValueError):
-        rate = tts_svc.DEFAULT_RATE
+        rate = tts_svc.default_rate()
 
     store.update('audio_tracks', tid, {
         'status': STATUS_GENERATING, 'gen_error': None, 'updated_at': _now()})
     paths.ensure_tts_dir(pid)
-    out = paths.tts_path(pid, tid)
+    # 换 provider 会换扩展名 —— 先把旧扩展名的残留删掉，避免目录里堆两个「同一段」
+    drop_file(pid, tid)
+    out = paths.tts_path(pid, tid, tts_svc.audio_ext())
     try:
         tts_svc.synthesize(text, out, voice=voice, rate=rate)
     except Exception as e:

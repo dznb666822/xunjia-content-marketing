@@ -67,7 +67,9 @@ services:
       # AI 剪辑素材仓（宿主机 D:/aiclip_store 与 D:/aiclip_inbox，见下方 volumes）
       AICLIP_STORE_ROOT: /app/aiclip_store
       AICLIP_INBOX_ROOT: /app/aiclip_inbox
-      # CosyVoice TTS 服务地址（未启动时不影响 web 主服务）
+      # TTS 语音合成：默认走火山引擎（凭据在 .env 里的 VOLC_TTS_*，由 env_file 注入，
+      # 容器内需要能出外网到 openspeech.bytedance.com）。
+      # 这台下面这条只是本地 CosyVoice 退路（TTS_PROVIDER=cosyvoice 时才用）。
       COSYVOICE_URL: http://host.docker.internal:50000
     extra_hosts:
       # Docker Desktop for Windows 自带 host.docker.internal 别名，显式声明以防万一

@@ -597,8 +597,20 @@ def api_reference_md(pid):
 
 
 # ---------------------------------------------------------------------------
-# TTS 语音（P5c）—— 参考脚本的台词 → 一镜一段旁白 → CosyVoice 合成
+# TTS 语音（P5c）—— 参考脚本的台词 → 一镜一段旁白 → TTS 合成
+#   合成引擎由 services/tts.py 选（默认火山引擎豆包语音合成大模型）
 # ---------------------------------------------------------------------------
+_TTS_MIME = {
+    'mp3': 'audio/mpeg',
+    'wav': 'audio/wav',
+    'ogg': 'audio/ogg',
+    'opus': 'audio/ogg',
+    'pcm': 'audio/L16',
+    'aac': 'audio/aac',
+    'm4a': 'audio/mp4',
+}
+
+
 @bp.route('/api/aiclip/projects/<pid>/tts', methods=['GET'])
 def api_tts_list(pid):
     """TTS 清单：逐镜台词（来自参考脚本）+ 生成状态 + 音色库。
@@ -672,20 +684,27 @@ def api_tts_delete(pid, tid):
 
 @bp.route('/api/aiclip/tts/<tid>', methods=['GET'])
 def api_tts_file(tid):
-    """TTS 音频文件。`conditional=True` 支持 Range —— `<audio>` 拖进度条要用。"""
+    """TTS 音频文件。`conditional=True` 支持 Range —— `<audio>` 拖进度条要用。
+
+    ⚠️ 扩展名随 TTS provider 变（火山 mp3 / CosyVoice wav），**按 tid 扫目录**而不是
+    拼路径 —— 换过 provider 的项目里新旧两种扩展名会同时存在。
+    """
     row = store.fetch_by_id('audio_tracks', tid)
     if not row or row.get('kind') != tl.KIND:
         return _err('音频不存在', 404)
-    fp = paths.tts_path(row.get('project_id'), tid)
-    if not os.path.isfile(fp):
+    fp = paths.find_tts_file(row.get('project_id'), tid)
+    if not fp or not os.path.isfile(fp):
         return _err('音频文件不存在（点「生成」重新合成）', 404)
-    resp = send_file(fp, mimetype='audio/wav', conditional=True)
+    ext = os.path.splitext(fp)[1].lstrip('.').lower()
+    resp = send_file(fp, mimetype=_TTS_MIME.get(ext, 'application/octet-stream'),
+                     conditional=True)
     # 重新生成 = 覆盖同一路径，所以必须禁缓存，否则浏览器一直播旧音频
     resp.headers['Cache-Control'] = 'no-store, must-revalidate'
     if request.args.get('download') in ('1', 'true', 'yes'):
         seq = row.get('shot_seq')
         resp.headers['Content-Disposition'] = 'attachment; filename*=UTF-8\'\'{}'.format(
-            _quote('tts-{}.wav'.format(seq if seq is not None else str(tid)[:8])))
+            _quote('tts-{}.{}'.format(seq if seq is not None else str(tid)[:8],
+                                      ext or 'bin')))
     return resp
 
 

@@ -1578,6 +1578,19 @@ function acTtsRate() {
   return isNaN(v) ? null : v;
 }
 
+/** 当前 TTS 引擎的输出扩展名（火山 mp3 / CosyVoice wav）—— 下载按钮要跟着变 */
+function acTtsExt() {
+  var p = (aiclipTts && aiclipTts.provider) || {};
+  return p.audio_ext || 'wav';
+}
+
+/** 音色 id → 人看得懂的名字（火山那串 zh_female_xxx_uranus_bigtts 没法看） */
+function acTtsVoiceName(id) {
+  var vs = (aiclipTts && aiclipTts.voices) || [];
+  for (var i = 0; i < vs.length; i++) { if (vs[i].id === id) return vs[i].name; }
+  return id;
+}
+
 function acTtsSegBySeq(seq) {
   var segs = (aiclipTts && aiclipTts.segments) || [];
   for (var i = 0; i < segs.length; i++) {
@@ -1614,6 +1627,7 @@ function aiclipRenderTts() {
   var st = t.stats || {};
   var batch = t.batch || {};
   var running = !!batch.running;
+  var prov = t.provider || {};
   if (badge) {
     badge.style.display = '';
     badge.textContent = st.total + ' 段 · 已生成 ' + st.done +
@@ -1621,7 +1635,22 @@ function aiclipRenderTts() {
       (running ? ' · 合成中 ' + (batch.done || 0) + '/' + (batch.total || 0) : '');
   }
 
-  var h = '<div class="ac-tts-toolbar">';
+  var h = '';
+  // 合成引擎是谁、配好了没 —— 没配就直接说清缺什么，别让用户点了「生成」才看到报错
+  if (!prov.configured) {
+    h += '<div class="ac-tts-prov is-bad">&#9888; <b>TTS 凭据没配</b> —— ' +
+      escapeHtml(prov.label || 'TTS') + ' 需要 ' +
+      escapeHtml((prov.missing || []).join('、')) +
+      '。填进 <code>.env</code> 后重启 <code>xunjia-web</code> 才生效（现在点「生成」必然失败）。</div>';
+  } else {
+    h += '<div class="ac-tts-prov">合成引擎：<b>' + escapeHtml(prov.label || '') + '</b>' +
+      '<span class="ac-dim"> · ' + escapeHtml(prov.auth || '') +
+      ' · ' + escapeHtml(prov.endpoint || '') +
+      ' · resource ' + escapeHtml(prov.resource_id || '') +
+      ' · 输出 .' + escapeHtml(acTtsExt()) + '</span></div>';
+  }
+
+  h += '<div class="ac-tts-toolbar">';
   h += '<label>音色</label><select id="ac-tts-voice">';
   var voices = t.voices || [];
   for (var v = 0; v < voices.length; v++) {
@@ -1631,7 +1660,7 @@ function aiclipRenderTts() {
   }
   h += '</select>';
   h += '<label>语速</label><input type="number" id="ac-tts-rate" step="0.02" min="0.5" max="2" value="' +
-    Number(t.default_rate || 0.88) + '">';
+    Number(t.default_rate || 1) + '" title="倍率：1.0 为原速，越小越慢">';
   h += '<button class="btn btn-primary btn-sm" id="ac-tts-picked"' +
     (running ? ' disabled' : '') + ' onclick="aiclipGenPickedTts()">生成本页勾选（' +
     acTtsPicked().length + '）</button>';
@@ -1648,7 +1677,7 @@ function aiclipRenderTts() {
   if (running) {
     h += '<div class="ac-dim" style="margin-bottom:8px;">&#9203; 批量合成中（#' +
       (batch.current != null ? batch.current : '-') + '）· 本页每 3 秒自动刷新。' +
-      'CosyVoice 逐段串行合成，几十段要几分钟。</div>';
+      '逐段串行合成，几十段要几分钟。</div>';
   }
 
   h += '<div class="ac-tts-list">';
@@ -1689,7 +1718,8 @@ function acTtsRowHtml(s) {
   if (!s.synced) h += '<span class="ac-pill ac-pill-warn">尚未导出</span>';
   if (s.audio_duration) h += '<span>音频 ' + acSec(s.audio_duration) + '</span>';
   if (st === 'done' && s.voice) {
-    h += '<span>' + escapeHtml(s.voice) + (s.rate ? ' · ' + s.rate : '') + '</span>';
+    h += '<span>&#127908; ' + escapeHtml(acTtsVoiceName(s.voice)) +
+      (s.rate ? ' · x' + s.rate : '') + '</span>';
   }
   h += '</div>';
   if (st === 'done' && s.audio_url) {
@@ -1697,7 +1727,7 @@ function acTtsRowHtml(s) {
       '<audio controls preload="none" src="' + escapeHtml(s.audio_url) + '?v=' +
       encodeURIComponent(s.gen_at || '') + '"></audio>' +
       '<a class="btn btn-secondary btn-xs" href="' + escapeHtml(s.audio_url) +
-      '?download=1">&#11015; wav</a></div>';
+      '?download=1">&#11015; ' + escapeHtml(acTtsExt()) + '</a></div>';
   }
   if (s.gen_error) {
     h += '<div class="ac-tts-err">' + escapeHtml(s.gen_error) + '</div>';
@@ -1796,7 +1826,7 @@ function acTtsRunBatch(body) {
       .then(function (r) { return r.json(); })
       .then(function (json) {
         if (!json.success) { showToast(json.error || '批量合成没起来', 'error'); return; }
-        showToast('已开始批量合成 —— CosyVoice 逐段串行，本页每 3 秒自动刷新');
+        showToast('已开始批量合成 —— 逐段串行，本页每 3 秒自动刷新');
         aiclipLoadTts();
         acScheduleTtsPoll(true);
       })
@@ -1807,7 +1837,7 @@ function acTtsRunBatch(body) {
 function aiclipDelTts(seq) {
   var s = acTtsSegBySeq(seq);
   if (!s || !s.track_id) return;
-  if (!window.confirm('删掉 #' + seq + ' 这一段（连带 wav 文件）？')) return;
+  if (!window.confirm('删掉 #' + seq + ' 这一段（连带音频文件）？')) return;
   fetch('/api/aiclip/projects/' + encodeURIComponent(aiclipProjectId) +
         '/tts/' + encodeURIComponent(s.track_id), { method: 'DELETE' })
     .then(function (r) { return r.json(); })

@@ -282,6 +282,11 @@
 /* 子页里的卡不再需要「撑满右栏」的高度约束，恢复自然流 */
 .ac-page>.card{margin-bottom:0}
 /* ---------- P5c：TTS 语音子页（一镜一段旁白） ---------- */
+/* 合成引擎提示条：正常时是一条淡信息（谁在念、什么 resource、输出什么格式），
+   没配凭据时变红并把「缺哪个变量 / 在哪儿配」直接写清楚 —— 不让用户点了「生成」才知道。 */
+.ac-tts-prov{margin-bottom:10px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg-subtle);font-size:11.5px;line-height:1.7;color:var(--text-primary)}
+.ac-tts-prov code{font-size:11px;padding:1px 4px;border-radius:4px;background:var(--bg);border:1px solid var(--border);font-family:ui-monospace,Consolas,monospace}
+.ac-tts-prov.is-bad{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.07);color:var(--text-primary)}
 .ac-tts-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-subtle);margin-bottom:12px}
 .ac-tts-toolbar label{font-size:11px;color:var(--text-hint)}
 .ac-tts-toolbar select,.ac-tts-toolbar input{padding:5px 8px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:12px;font-family:inherit}
