@@ -8,7 +8,7 @@ from flask_cors import CORS
 
 from web import (auth, douyin, brands, competitors, dashboard, analysis, scripts,
                  ad, price_research, trend, intent, trendradar, videos, prompts, pages,
-                 comic, ai_clip)
+                 comic, ai_clip, aiclip_fetch)
 
 
 def create_app():
@@ -18,6 +18,14 @@ def create_app():
         static_folder=os.path.join(context.BASE_DIR, 'static'))
 
     app.secret_key = os.environ.get('SECRET_KEY', 'douyin-spider-internal-secret-key-2026')
+    # 开发期模板自动重载。默认 Jinja2 在生产模式**缓存模板**：改了
+    # templates/index.html 而不重启容器，页面会继续发旧 HTML ——
+    # 实测踩过：新加的 CSS 一条都没加载，DOM（JS 实时生成）全对、样式全缺，
+    # 弹窗以普通 div 出现在文档流末尾，看起来像"代码没生效"。
+    # 生产部署时设 TEMPLATES_AUTO_RELOAD=0 关掉。
+    app.config['TEMPLATES_AUTO_RELOAD'] = os.environ.get(
+        'TEMPLATES_AUTO_RELOAD', '1') not in ('0', 'false', 'False', 'no')
+    app.jinja_env.auto_reload = app.config['TEMPLATES_AUTO_RELOAD']
     CORS(app, supports_credentials=True)
 
     blueprints = [
@@ -38,6 +46,7 @@ def create_app():
         pages.bp,
         comic.bp,
         ai_clip.bp,
+        aiclip_fetch.bp,
     ]
     for bp in blueprints:
         app.register_blueprint(bp)

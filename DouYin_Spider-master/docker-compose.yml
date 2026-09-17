@@ -64,9 +64,10 @@ services:
       WEB_HOST: 0.0.0.0
       WEB_PORT: "5000"
       TZ: Asia/Shanghai
-      # Smart-Clip MCP 服务地址（走 host.docker.internal 绕开跨网络限制）
-      SMART_CLIP_MCP_URL: http://host.docker.internal:8000
-      # CosyVoice TTS 服务地址（同上，未启动时不影响 web 主服务）
+      # AI 剪辑素材仓（宿主机 D:/aiclip_store 与 D:/aiclip_inbox，见下方 volumes）
+      AICLIP_STORE_ROOT: /app/aiclip_store
+      AICLIP_INBOX_ROOT: /app/aiclip_inbox
+      # CosyVoice TTS 服务地址（未启动时不影响 web 主服务）
       COSYVOICE_URL: http://host.docker.internal:50000
     extra_hosts:
       # Docker Desktop for Windows 自带 host.docker.internal 别名，显式声明以防万一
@@ -74,9 +75,19 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      # 采集媒体与导出文件持久化
+      # ---- 采集媒体与导出文件持久化 ----
       - app-datas:/app/datas
       - app-output:/app/output
+      # ---- 开发期源码挂载：改磁盘即时生效，不必每轮 rebuild ----
+      # （镜像里 web/ 的 15 个 pyc 模块磁盘上同步存在，所以挂载不会丢模块）
+      - ./web:/app/web
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./services:/app/services
+      # ---- AI 剪辑素材仓（必须落在宿主机目录，命名卷挂不进去）----
+      # 自愈：目录不存在时 Docker 会自动创建
+      - D:/aiclip_store:/app/aiclip_store
+      - D:/aiclip_inbox:/app/aiclip_inbox
     networks:
       - xunjia-net
 

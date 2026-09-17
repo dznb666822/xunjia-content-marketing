@@ -128,6 +128,183 @@
 .cp-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (max-width:1100px){.cp-layout{grid-template-columns:1fr}}
 </style>
+<style id="aiclip-css">
+/* ======== AI 智能剪辑（ac- 命名空间） ======== */
+.ac-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;padding:4px 0}
+.ac-card{position:relative;height:152px;border:1px solid var(--border);border-radius:var(--radius-card);background:var(--bg-card);padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;transition:all .15s ease}
+.ac-card:hover{border-color:var(--accent);box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+.ac-card-title{font-size:13px;font-weight:600;color:var(--text-primary);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ac-card-meta{font-size:11px;color:var(--text-hint);margin-top:6px}
+.ac-card-badges{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.ac-card-bar{height:3px;border-radius:2px;background:var(--bg-subtle);margin-top:auto;overflow:hidden}
+.ac-card-bar i{display:block;height:100%;background:var(--accent)}
+.ac-card-del{position:absolute;right:10px;bottom:8px;opacity:0;transition:opacity .15s ease}
+.ac-card:hover .ac-card-del{opacity:1}
+.ac-card-new{border-style:dashed;border-color:#c7d2fe;background:var(--accent-light);align-items:center;justify-content:center;text-align:center}
+.ac-card-new:hover{border-color:var(--accent);background:rgba(59,130,246,0.12)}
+.ac-card-new-icon{font-size:34px;font-weight:300;color:var(--accent);line-height:1}
+.ac-card-new-text{font-size:13px;font-weight:600;color:var(--accent-text);margin-top:8px}
+.ac-card-new-hint{font-size:11px;color:var(--text-hint);margin-top:4px}
+.ac-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;background:rgba(99,102,241,0.12);color:var(--accent-text)}
+.ac-badge-ok{background:rgba(16,185,129,0.14);color:#047857}
+.ac-badge-warn{background:rgba(245,158,11,0.16);color:#b45309}
+.ac-badge-oral{background:rgba(217,119,6,0.14);color:#b45309}
+.ac-kind-row{display:flex;flex-direction:column;gap:8px}
+.ac-kind{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-tag);cursor:pointer;background:var(--bg-input)}
+.ac-kind:hover{border-color:var(--accent)}
+.ac-kind span{display:flex;flex-direction:column}
+.ac-kind b{font-size:12.5px;color:var(--text-primary);font-weight:600}
+.ac-kind i{font-size:11px;color:var(--text-hint);font-style:normal;line-height:1.6}
+/* .ac-steps / .ac-step-* 已随「链路进度」左栏一起删除（2026-09-17 拆子页），
+   进程到哪一步改由顶部导航栏的两个子页表达。 */
+.ac-drop{border:1.5px dashed #c7d2fe;border-radius:var(--radius-card);background:var(--accent-light);padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:7px;align-items:center;transition:all .15s ease}
+.ac-drop b{font-size:13px;color:var(--accent-text)}
+.ac-drop span{font-size:11.5px;color:var(--text-hint)}
+.ac-drop-on{border-color:var(--accent);background:rgba(59,130,246,0.14)}
+.ac-mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;margin-top:6px}
+.ac-mat{position:relative;border:1px solid var(--border);border-radius:var(--radius-card);background:var(--bg-card);overflow:hidden;display:flex;flex-direction:column}
+.ac-mat-thumb{position:relative;height:118px;background:var(--bg-subtle);display:flex;align-items:center;justify-content:center}
+.ac-mat-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ac-mat-nothumb::after{content:"无缩略图";font-size:11px;color:var(--text-hint)}
+.ac-mat-type,.ac-mat-dur{position:absolute;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(15,23,42,0.72);color:#fff}
+.ac-mat-type{left:6px;top:6px}
+.ac-mat-dur{right:6px;bottom:6px}
+.ac-mat-body{padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.ac-mat-name{font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-mat-meta{font-size:11px;color:var(--text-hint)}
+.ac-mat-badges{display:flex;flex-wrap:wrap;gap:4px}
+.ac-mat-note{font-size:10.5px;color:#b45309;line-height:1.5}
+.ac-mat-ops{display:flex;gap:6px;padding:0 11px 10px;opacity:0;transition:opacity .15s ease}
+.ac-mat:hover .ac-mat-ops{opacity:1}
+.ac-inbox{border:1px solid var(--border);border-radius:var(--radius-card);padding:12px;background:var(--bg-input)}
+/* ======== 素材理解（P2） ======== */
+.ac-mat-und{display:flex;align-items:center;gap:6px;margin-top:3px}
+.ac-und-badge{font-size:10px;padding:1px 7px;border-radius:999px;flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-und-pending{background:rgba(100,116,139,.13);color:var(--text-hint)}
+.ac-und-running{background:rgba(59,130,246,.16);color:var(--accent-text)}
+.ac-und-done{background:rgba(16,185,129,.15);color:#047857}
+.ac-und-failed{background:rgba(239,68,68,.15);color:#b91c1c}
+.ac-und-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-tag);background:var(--bg-subtle)}
+.ac-und-bar b{font-size:12.5px;color:var(--text-primary)}
+.ac-und-bar span{font-size:11px;color:var(--text-hint);line-height:1.6}
+.ac-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px}
+.ac-modal{background:var(--bg-card);border-radius:var(--radius-card);max-width:880px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.28)}
+.ac-modal-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);flex:none}
+.ac-modal-head b{font-size:14px;color:var(--text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ac-modal-body{padding:14px 18px;overflow:auto;flex:1;min-height:0}
+.ac-modal-foot{display:flex;gap:8px;align-items:center;padding:11px 18px;border-top:1px solid var(--border);flex:none;background:var(--bg-subtle)}
+.ac-sec-title{font-size:11.5px;font-weight:600;color:var(--text-secondary);margin:15px 0 7px;letter-spacing:.4px}
+.ac-sec-title:first-child{margin-top:0}
+.ac-kv{display:flex;gap:8px;font-size:11.5px;line-height:1.8;color:var(--text-secondary)}
+.ac-kv b{color:var(--text-hint);font-weight:400;flex:none;min-width:54px}
+.ac-unit{border:1px solid var(--border);border-radius:var(--radius-tag);padding:9px 11px;margin-bottom:8px;background:var(--bg-subtle)}
+.ac-unit-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ac-unit-time{font-size:11px;font-weight:600;color:var(--accent-text)}
+.ac-unit-idx{font-size:10px;color:var(--text-hint)}
+.ac-unit-visual{font-size:12px;color:var(--text-primary);line-height:1.7;margin-top:5px}
+.ac-unit-speech{font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:5px;padding-left:9px;border-left:2px solid rgba(99,102,241,.4)}
+.ac-unit-use{font-size:10px;color:var(--text-hint);margin-top:5px}
+.ac-transcript{font-size:12px;line-height:1.85;color:var(--text-secondary);white-space:pre-wrap;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-tag);padding:10px 12px;background:var(--bg-subtle)}
+.ac-inbox-head{display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px;flex-wrap:wrap}
+.ac-inbox-head code{font-size:11px;color:var(--text-hint)}
+.ac-inbox-list{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.ac-inbox-item{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 7px;border-radius:var(--radius-tag);cursor:pointer}
+.ac-inbox-item:hover{background:var(--bg-subtle)}
+.ac-inbox-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-inbox-meta{font-size:11px;color:var(--text-hint);flex:none}
+
+/* ===== P3 剧本 + 参考脚本 ===== */
+.ac-hit{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.ac-drop2{flex:1;min-width:210px;border:1px dashed var(--border);border-radius:var(--radius-tag);padding:12px;text-align:center;font-size:12px;color:var(--text-hint)}
+.ac-drop2-on{border-color:var(--accent);background:var(--bg-subtle)}
+.ac-shot-wrap{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-tag);margin-top:8px}
+.ac-shot-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+.ac-shot-wrap th{position:sticky;top:0;background:var(--bg-subtle);text-align:left;padding:6px 8px;white-space:nowrap;font-weight:600;z-index:1}
+.ac-shot-wrap td{padding:6px 8px;border-top:1px solid var(--border);vertical-align:top;line-height:1.6}
+.ac-shot-wrap tr:hover td{background:var(--bg-subtle)}
+.ac-seq{font-weight:700;color:var(--accent);font-size:11px}
+.ac-dim{color:var(--text-hint);font-size:11px;line-height:1.7}
+.ac-mono{font-family:ui-monospace,Consolas,monospace;font-size:11px;word-break:break-all}
+.ac-kv{display:flex;gap:8px;padding:2px 0;font-size:12px;line-height:1.75}
+.ac-kv>i{flex:none;width:70px;font-style:normal;color:var(--text-hint)}
+.ac-kv>span{flex:1;min-width:0}
+.ac-gap{border-left:3px solid var(--border);background:var(--bg-subtle);padding:7px 10px;margin:6px 0;font-size:12px;line-height:1.75;border-radius:0 6px 6px 0}
+.ac-gap-h{font-weight:600;display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
+.ac-gap-tts{border-left-color:#8b5cf6}
+.ac-gap-shoot{border-left-color:#ef4444}
+.ac-gap-stock{border-left-color:#3b82f6}
+.ac-gap-effect{border-left-color:#f59e0b}
+.ac-gap-reuse{border-left-color:#10b981}
+.ac-tag-auto{font-size:10px;padding:1px 5px;border-radius:5px;background:var(--bg);border:1px solid var(--border);color:var(--text-hint);font-weight:400}
+.ac-sub{font-size:12px;font-weight:600;margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+.ac-pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--border);margin:0 4px 4px 0}
+.ac-pill-ok{color:#10b981;border-color:#10b981}
+.ac-pill-warn{color:#f59e0b;border-color:#f59e0b}
+.ac-pill-bad{color:#ef4444;border-color:#ef4444}
+.ac-band{display:inline-block;min-width:17px;text-align:center;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--accent);color:#fff}
+.ac-busy{opacity:.55;pointer-events:none}
+/* ---------- P5：素材预览 + 理解结果人工校对 ---------- */
+.ac-mat-thumb{cursor:pointer}
+.ac-mat-play{position:absolute;right:4px;bottom:4px;width:18px;height:18px;line-height:18px;text-align:center;font-size:9px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff}
+.ac-preview{background:#0b1220;border-radius:8px;padding:8px;margin-bottom:12px}
+.ac-preview-media{display:block;width:100%;max-height:340px;object-fit:contain;border-radius:5px;background:#000}
+.ac-preview-zoomable{cursor:zoom-in}
+.ac-preview-none{padding:20px;text-align:center;color:var(--text-hint);font-size:12px}
+.ac-preview-bar{display:flex;gap:10px;align-items:center;margin-top:6px;font-size:11px;color:#cbd5e1;flex-wrap:wrap}
+.ac-preview-bar a{color:#93c5fd}
+.ac-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:zoom-out}
+.ac-lightbox img{max-width:96vw;max-height:96vh;object-fit:contain}
+.ac-field{margin:5px 0}
+.ac-field>label{display:block;font-size:11px;color:var(--text-hint);margin-bottom:2px}
+.ac-field-inline>label{display:inline-block;width:44px;vertical-align:top;padding-top:5px}
+.ac-field-inline>textarea{width:calc(100% - 52px);display:inline-block;vertical-align:top}
+.ac-field-hint{display:block;font-size:10px;color:var(--text-hint);font-style:normal;margin-top:2px}
+.ac-input{width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;font-family:inherit;box-sizing:border-box}
+.ac-input-area{min-height:52px;resize:vertical;line-height:1.7}
+.ac-edit-hint{font-size:10px;font-weight:400;color:var(--accent-text);margin-left:8px}
+/* .ac-flow* 创作流程台已按爸爸要求整块删除（2026-09-17）。入口改由 .ac-nav + 子页承担。 */
+/* ---------- 模块级导航栏（列表页 / 子页常驻） ---------- */
+.ac-nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0 0 13px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.ac-nav-item{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:8px;background:var(--bg-subtle);color:var(--text);font-size:12.5px;font-family:inherit;cursor:pointer;transition:border-color .15s,transform .1s,background .15s;white-space:nowrap}
+.ac-nav-item:hover{border-color:var(--accent);transform:translateY(-1px)}
+.ac-nav-on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.ac-nav-on:hover{transform:none}
+.ac-nav-icon{font-size:13px;line-height:1}
+.ac-nav-hint{margin-left:auto;font-size:11px;color:var(--text-hint)}
+/* ---------- 子页项目头（两页共用，替代原详情页左栏） ---------- */
+.ac-page-head{margin-bottom:12px}
+.ac-ph-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-subtle)}
+.ac-ph-title{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--text-primary);margin-right:2px}
+.ac-ph-bar{width:74px;height:5px;border-radius:3px;background:var(--border);overflow:hidden;flex:none}
+.ac-ph-bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+.ac-ph-actions{margin-left:auto;display:inline-flex;gap:6px}
+.ac-ph-panel{margin-top:10px;padding:13px 14px;border:1px solid var(--border);border-radius:9px;background:var(--bg-subtle)}
+/* 子页里的卡不再需要「撑满右栏」的高度约束，恢复自然流 */
+.ac-page>.card{margin-bottom:0}
+/* ---------- P5c：TTS 语音子页（一镜一段旁白） ---------- */
+.ac-tts-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-subtle);margin-bottom:12px}
+.ac-tts-toolbar label{font-size:11px;color:var(--text-hint)}
+.ac-tts-toolbar select,.ac-tts-toolbar input{padding:5px 8px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:12px;font-family:inherit}
+.ac-tts-toolbar input[type=number]{width:74px}
+.ac-tts-stats{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ac-tts-list{display:flex;flex-direction:column;gap:8px}
+.ac-tts-row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg)}
+.ac-tts-row.is-need{border-left:3px solid var(--accent)}
+.ac-tts-row.is-done{background:var(--bg-subtle)}
+/* ★ 勾选框必须显式给尺寸：全局 input 规则会把它撑成 width:100%
+   （实测 1294px）→ 右侧 .ac-tts-body 被挤成 0 宽 → 台词一个字一行、整页炸到 1 万 px。 */
+.ac-tts-check{flex:none;width:14px;height:14px;min-width:14px;margin:3px 0 0;padding:0;cursor:pointer;accent-color:var(--accent)}
+.ac-tts-seq{flex:none;min-width:46px;font-size:10px;color:var(--text-hint);font-family:ui-monospace,Consolas,monospace;line-height:1.5}
+.ac-tts-seq b{display:block;font-size:13.5px;color:var(--text-primary);font-family:inherit}
+.ac-tts-body{flex:1;min-width:0}
+.ac-tts-text{font-size:12.5px;line-height:1.75;color:var(--text-primary);word-break:break-word}
+.ac-tts-meta{margin-top:5px;font-size:11px;color:var(--text-hint);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ac-tts-audio{margin-top:7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ac-tts-audio audio{height:30px;flex:1;min-width:190px;max-width:100%}
+.ac-tts-acts{flex:none;display:flex;flex-direction:column;gap:5px}
+.ac-tts-err{margin-top:6px;font-size:11px;color:#ef4444;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:5px 8px;line-height:1.65;word-break:break-word}
+.ac-tts-empty{padding:26px 14px;text-align:center;color:var(--text-hint);font-size:12px;line-height:2}
+</style>
 </head>
 <body>
 <div class="bg-ambient"></div>
@@ -380,7 +557,7 @@
           <div class="nav-item" data-panel="mashup"><span>智能混剪</span></div>
           <div class="nav-item" data-panel="comic"><span>AI漫剧设计</span></div>
           <div class="nav-item" data-panel="materials"><span>素材获取</span></div>
-          <div class="nav-item" data-panel="ai-clip"><span>AI智能混剪</span></div>
+          <div class="nav-item" data-panel="ai-clip"><span>AI智能剪辑</span></div>
           <div class="nav-item nav-item-disabled"><span>一键多尺寸</span><span class="nav-tag-dev">待开发</span></div>
         </div>
       </div>
@@ -1242,85 +1419,75 @@
         </div>
       </div>
 
-      <!-- ========== Panel: AI智能混剪 ========== -->
+      <!-- ========== Panel: AI智能剪辑（P1：项目 + 素材） ========== -->
       <div class="panel" id="panel-ai-clip">
-        <div class="mashup-root">
 
-          <div class="mashup-page-head">
-            <div class="mashup-page-title">
-              <div class="mashup-page-title-icon">&#9986;</div>
-              <div>
-                <h2>AI 智能混剪</h2>
-                <p>基于 Smart-Clip MCP 引擎，自动识别高光片段并裁剪成片（口播 / 播客 / 直播回放）</p>
-              </div>
-            </div>
-            <div class="aiclip-status" id="aiclip-status">检测中...</div>
-          </div>
+        <!-- 模块级导航栏（爸爸明确要的：模块页面上面有一条导航）
+             列表页 / 两个子页都常驻；点了切屏。
+             条目定义见 app-aiclip.js 的 AC_NAV（同一份数据渲染，不写两处）。 -->
+        <div id="aiclip-nav" class="ac-nav"></div>
 
-          <!-- 上传 -->
+        <!-- 视图一：项目卡片列表（首页只留这个 —— SOP 入口交给导航栏）
+             2026-09-17：原「创作流程 · 剧本 × 素材理解 × 用户需求 → 参考脚本」台已按要求删除 -->
+        <div id="aiclip-list-view">
           <div class="card">
-            <div class="card-header"><span class="icon accent">&#128228;</span>上传视频</div>
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <input type="file" id="aiclip-file-input" accept="video/*" style="display:none;" onchange="aiClipUpload(this.files)">
-              <button class="btn btn-secondary" onclick="document.getElementById('aiclip-file-input').click()">选择视频文件</button>
-              <span id="aiclip-upload-status" style="font-size:12px;color:#94a3b8;">支持 mp4 / mov 等，上传后可自动剪辑</span>
-            </div>
-            <div style="margin-top:12px;">
-              <input type="text" id="aiclip-video-input" placeholder="或粘贴视频路径 / URL（如 https://... ）" style="max-width:560px;">
-            </div>
-          </div>
-
-          <!-- 配置 -->
-          <div class="card">
-            <div class="card-header"><span class="icon accent2">&#127912;</span>剪辑配置</div>
-            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;">
-              <div>
-                <label class="form-label">剪辑意图</label>
-                <input type="text" id="aiclip-intent" value="提取精彩片段" placeholder="如：提取最精彩的5个片段">
-              </div>
-              <div>
-                <label class="form-label">片段数量</label>
-                <input type="number" id="aiclip-count" value="5" min="1" max="20">
-              </div>
-              <div>
-                <label class="form-label">最短时长（秒）</label>
-                <input type="number" id="aiclip-min" value="15" min="5">
-              </div>
-              <div>
-                <label class="form-label">最长时长（秒）</label>
-                <input type="number" id="aiclip-max" value="90" min="10">
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;">
-              <label class="form-label" style="margin:0;">目标平台</label>
-              <select id="aiclip-platform" style="width:auto;">
-                <option value="original">原始比例</option>
-                <option value="tiktok">TikTok 竖屏</option>
-                <option value="youtube_shorts">YouTube Shorts</option>
-                <option value="instagram_reels">Instagram Reels</option>
-              </select>
-              <button class="btn btn-primary" id="aiclip-start-btn" onclick="aiClipStart()">&#127916; 开始智能剪辑</button>
-              <button class="btn btn-accent2" id="aiclip-plan-btn" onclick="aiClipGeneratePlan()">&#9889; 生成剪辑方案</button>
-              <span id="aiclip-status-text" style="font-size:12px;color:#94a3b8;"></span>
-            </div>
-          </div>
-
-          <!-- 结果 -->
-          <div class="card" id="aiclip-result-card" style="display:none;">
-            <div class="card-header"><span class="icon success">&#128230;</span>剪辑结果</div>
-            <div id="aiclip-result"></div>
-          </div>
-
-          <!-- 剪辑方案（VideoPlan） -->
-          <div class="card" id="aiclip-plan-card" style="display:none;">
             <div class="card-header" style="justify-content:space-between;">
-              <span><span class="icon accent">&#128196;</span>剪辑方案（VideoPlan · V2.0）</span>
-              <button class="btn btn-secondary btn-xs" onclick="aiClipPlanRefresh()">&#8635; 重新生成</button>
+              <span><span class="icon accent">&#9986;</span>AI 智能剪辑 · 我的项目</span>
+              <button class="btn btn-secondary btn-xs" onclick="loadAiclipProjects()">&#8635; 刷新</button>
             </div>
-            <div id="aiclip-plan-meta" style="display:none;margin-bottom:12px;"></div>
-            <div id="aiclip-plan-result"></div>
+            <div id="aiclip-cards-grid" class="ac-cards-grid">
+              <div style="text-align:center;padding:50px 20px;color:var(--text-hint);grid-column:1/-1;">加载中...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 项目头（子页共用的上下文条）：项目名 + 片型/状态 + 进度 + 设置/返回
+             内容由 app-aiclip.js 的 acRenderPageHead() 渲染；列表页隐藏。 -->
+        <div id="aiclip-page-head" class="ac-page-head" style="display:none;"></div>
+
+        <!-- 视图二：素材子页（导航「素材」） -->
+        <div id="aiclip-page-assets" class="ac-page" style="display:none;">
+          <!-- 卡片 id 保留着：它们是「素材 / 参考脚本」两页的定位标记（也便于 e2e 脚本断言） -->
+          <div class="card" id="aiclip-card-materials">
+            <div class="card-header" style="justify-content:space-between;">
+              <span><span class="icon accent">&#128230;</span>素材</span>
+              <span class="spinner" id="spinner-aiclip"></span>
+            </div>
+            <div id="aiclip-materials-panel"></div>
+          </div>
+        </div>
+
+        <!-- 视图三：参考脚本生成子页（导航「参考脚本生成」）
+             剧本（SOP ①）与用户需求（SOP ② 的输入）都收在这一页 —— 它们是这条链路的输入，不单独占一屏。 -->
+        <div id="aiclip-page-reference" class="ac-page" style="display:none;">
+          <div class="card" id="aiclip-card-script">
+            <div class="card-header" style="justify-content:space-between;">
+              <span><span class="icon accent2">&#128221;</span>剧本</span>
+              <span id="aiclip-script-badge" class="ac-badge" style="display:none;"></span>
+            </div>
+            <div id="aiclip-script-panel"></div>
           </div>
 
+          <div class="card" id="aiclip-card-reference" style="margin-top:12px;">
+            <div class="card-header" style="justify-content:space-between;">
+              <span><span class="icon accent">&#127916;</span>参考脚本</span>
+              <span id="aiclip-reference-badge" class="ac-badge" style="display:none;"></span>
+            </div>
+            <div id="aiclip-reference-panel"></div>
+          </div>
+        </div>
+
+        <!-- 视图四：TTS 语音子页（导航「TTS 语音」）
+             「导出」按钮长在参考脚本页的按钮区里，产物落到这一页 ——
+             一镜一段旁白，逐段可试听（<audio> 走 /api/aiclip/tts/<tid>，支持 Range）。 -->
+        <div id="aiclip-page-tts" class="ac-page" style="display:none;">
+          <div class="card" id="aiclip-card-tts">
+            <div class="card-header" style="justify-content:space-between;">
+              <span><span class="icon accent">&#128266;</span>TTS 语音</span>
+              <span id="aiclip-tts-badge" class="ac-badge" style="display:none;"></span>
+            </div>
+            <div id="aiclip-tts-panel"></div>
+          </div>
         </div>
       </div>
 
@@ -1684,6 +1851,7 @@
 <script src="/static/js/app-price-research.js"></script>
 <script src="/static/js/app-intent.js"></script>
 <script src="/static/js/app-comic.js"></script>
+<script src="/static/js/app-aiclip.js"></script>
 <script src="/static/js/tools.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" onerror="window.__markedFailed=true"></script>
       <script src="/static/js/app-campaign.js"></script>

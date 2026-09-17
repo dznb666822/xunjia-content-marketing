@@ -1,923 +1,854 @@
 # -*- coding: utf-8 -*-
-"""AI 智能混剪 API —— 对接 Smart-Clip MCP 服务（http://127.0.0.1:8000）。"""
-import json
+"""AI 剪辑模块 API（P1 项目 + 素材；P2 素材理解；P3 剧本 + 参考脚本）。
+
+设计口径：
+    · 旧版是 Smart-Clip MCP 的 web 壳（/status · /clip · /upload 全是转发），
+      **已全部删除**；MCP 仓库本身保留，那 4 个 tool 将来做长视频切片还用。
+    · 本模块走 services/aiclip/ 的独立 DAL，直接对齐已有 11 张表。
+    · P1 一次 LLM 都不调：建项目 → 导素材 → 体检（全部确定性）。
+    · P2 只在**用户主动点**理解时才调 LLM，且理解是异步的（长素材要几分钟）。
+    · P3 的剧本导入是确定性的（解析 xlsx，零 LLM）；参考脚本是 LLM 第 1 次，同样异步。
+
+路由一览
+    GET    /api/aiclip/health                          自检（存储根 / ffmpeg / schema）
+    GET    /api/aiclip/projects                        项目列表
+    POST   /api/aiclip/projects                        新建项目
+    GET    /api/aiclip/projects/<pid>                  项目详情（含步骤状态）
+    PATCH  /api/aiclip/projects/<pid>                  改名 / 换片型 / 封面等
+    DELETE /api/aiclip/projects/<pid>                  软删除
+    GET    /api/aiclip/projects/<pid>/materials        项目素材列表
+    POST   /api/aiclip/projects/<pid>/materials/upload 上传（multipart，可多文件）
+    POST   /api/aiclip/projects/<pid>/materials/scan   从素材箱（inbox）扫描导入
+    POST   /api/aiclip/projects/<pid>/materials/link   把全库已有素材挂到项目
+    DELETE /api/aiclip/projects/<pid>/materials/<mid>  从项目移除（保留全库资产）
+    GET    /api/aiclip/materials                       全库素材（轻量，不含 units）
+    GET    /api/aiclip/materials/<mid>                 单素材详情（含 units / 转写全文）
+    DELETE /api/aiclip/materials/<mid>                 删全库资产（有引用时拒绝）
+    POST   /api/aiclip/materials/<mid>/reprobe         重跑体检（确定性）
+    POST   /api/aiclip/materials/<mid>/understand      理解本条素材（异步）
+    POST   /api/aiclip/projects/<pid>/materials/understand  批量理解项目素材（异步）
+    GET    /api/aiclip/projects/<pid>/script           读剧本（含镜表）
+    POST   /api/aiclip/projects/<pid>/script           导入剧本（xlsx 上传 / 文本粘贴）
+    POST   /api/aiclip/projects/<pid>/requirement      只改用户需求
+    GET    /api/aiclip/projects/<pid>/reference        读参考脚本（?full=1 带 timeline）
+    POST   /api/aiclip/projects/<pid>/reference        生成参考脚本（异步，LLM 第 1 次）
+    GET    /api/aiclip/projects/<pid>/reference.md     人看版 md（?download=1 下载）
+    GET    /api/aiclip/projects/<pid>/tts              TTS 清单：逐镜台词 + 生成状态 + 音色库
+    POST   /api/aiclip/projects/<pid>/tts/sync         导出：参考脚本台词 → TTS 清单（幂等）
+    POST   /api/aiclip/projects/<pid>/tts/generate     批量合成（异步，后台逐段串行）
+    POST   /api/aiclip/projects/<pid>/tts/<tid>/generate  单段合成（同步，几秒）
+    DELETE /api/aiclip/projects/<pid>/tts/<tid>        删一段（连带删 wav）
+    GET    /api/aiclip/tts/<tid>                       TTS 音频（Range，供 <audio> 拖动试听）
+    GET    /api/aiclip/inbox                           素材箱待导入文件
+    GET    /api/aiclip/file/<sha1>                     原素材（?download=1 则下载）
+    GET    /api/aiclip/thumb/<sha1>                    缩略图（缺失时即时生成）
+
+异步口径：理解一条 246s 口播要 2–3 分钟、生成一次参考脚本实测约 2 分钟，HTTP 都等不起。
+所以 POST 立即返回，进度由列表里的 `understand.status` / `reference_status`
+（pending|generating|done|failed）反映，前端轮询即可 —— 不额外造一套任务轮询接口。
+"""
 import os
 import re
 import threading
 
-import requests
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request, send_file, session
 from loguru import logger
+
+from services.aiclip import materials as mat
+from services.aiclip import paths, probe, projects, store
+from services.aiclip import reference as ref
+from services.aiclip import script_io as sio
+from services.aiclip import ttsline as tl
+from services.aiclip import understand as und
 
 bp = Blueprint('ai_clip', __name__)
 
-# Smart-Clip MCP 服务地址：容器内通过服务名访问，本地开发用 127.0.0.1
-MCP_BASE = os.environ.get('SMART_CLIP_MCP_URL', 'http://127.0.0.1:8000').rstrip('/')
-MCP_TIMEOUT = (5, 900)  # (connect, read)
-
-
-def _mcp_call(tool_name, arguments):
-    """通过 MCP SSE 协议调用 Smart-Clip 工具，返回 JSON-RPC result/error。"""
-    sse = requests.get(MCP_BASE + '/sse', stream=True, timeout=MCP_TIMEOUT)
-    buf = ''
-    for chunk in sse.iter_content(chunk_size=1, decode_unicode=True):
-        if not chunk:
-            continue
-        buf += chunk
-        if '\n\n' in buf:
-            break
-
-    m = re.search(r'/messages/[^\s]+', buf)
-    if not m:
-        sse.close()
-        raise RuntimeError('无法获取 Smart-Clip MCP 会话')
-
-    endpoint = m.group(0)
-    url = MCP_BASE + endpoint
-
-    # 后台线程持续读取 SSE，保持会话存活
-    def _drain():
-        try:
-            for _ in sse.iter_content(chunk_size=1024, decode_unicode=True):
-                pass
-        except Exception:
-            pass
-
-    threading.Thread(target=_drain, daemon=True).start()
-
-    try:
-        requests.post(url, json={
-            'jsonrpc': '2.0', 'id': 1, 'method': 'initialize',
-            'params': {
-                'protocolVersion': '2024-11-05',
-                'capabilities': {},
-                'clientInfo': {'name': 'douyin-web', 'version': '1.0'},
-            },
-        }, timeout=30)
-
-        r = requests.post(url, json={
-            'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call',
-            'params': {'name': tool_name, 'arguments': arguments},
-        }, timeout=MCP_TIMEOUT)
-
-        return _parse_response(r.text)
-    finally:
-        sse.close()
-
-
-def _parse_response(text):
-    """解析 MCP 响应：优先按 JSON，否则按 SSE data 行解析。"""
-    text = (text or '').strip()
-    if not text:
-        return {'error': '空响应'}
-    try:
-        return json.loads(text)
-    except Exception:
-        pass
-    lines = [ln[5:].strip() for ln in text.splitlines() if ln.startswith('data:')]
-    if lines:
-        try:
-            return json.loads(lines[-1])
-        except Exception:
-            pass
-    return {'error': text[:500]}
-
-
-@bp.route('/api/aiclip/status', methods=['GET'])
-def api_aiclip_status():
-    """检测 Smart-Clip MCP 服务是否在线。"""
-    try:
-        r = requests.get(MCP_BASE + '/sse', timeout=(2, 3), stream=True)
-        r.close()
-        return jsonify({'success': True, 'running': True, 'endpoint': MCP_BASE + '/sse'})
-    except Exception as e:
-        return jsonify({'success': True, 'running': False, 'error': str(e)})
-
-
-# imagedl 支持的图片搜索源（与 pyimagedl 0.5.x 同步）
-IMAGEDL_SOURCES = {
-    'BaiduImageClient': '百度图片',
-    'BingImageClient': '必应图片',
-    'GoogleImageClient': '谷歌图片',
-    'I360ImageClient': '360 图片',
-    'PixabayImageClient': 'Pixabay',
-    'YandexImageClient': 'Yandex',
-    'DuckduckgoImageClient': 'DuckDuckGo',
-    'SogouImageClient': '搜狗图片',
-    'YahooImageClient': '雅虎图片',
-    'UnsplashImageClient': 'Unsplash',
-    'BingWallpaperClient': 'Bing 壁纸',
-    'PexelsImageClient': 'Pexels',
-    'FlickrImageClient': 'Flickr',
-    'NASAImageClient': 'NASA',
-    'EverypixelImageClient': 'Everypixel',
+SHA1_RE = re.compile(r'^[0-9a-f]{40}$')
+MIME_FALLBACK = {
+    '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm',
+    '.mkv': 'video/x-matroska', '.png': 'image/png', '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif',
+    '.bmp': 'image/bmp',
 }
 
 
-@bp.route('/api/aiclip/test-material/sources', methods=['GET'])
-def api_aiclip_test_material_sources():
-    """返回支持的素材搜索源（给前端下拉框用）。"""
-    return jsonify({'success': True, 'sources': IMAGEDL_SOURCES})
+@bp.before_request
+def _bootstrap():
+    """首次进入本蓝图时自愈 schema 与目录（幂等，之后零开销）。"""
+    store.ensure_schema()
+    paths.ensure_dirs()
 
 
-@bp.route('/api/aiclip/test-material', methods=['POST'])
-def api_aiclip_test_material():
-    """用 imagedl 搜索 + 下载图片素材，返回本地可访问的 URL。
-
-    Body JSON:
-        keyword: 必填，搜索关键词
-        source: 选填，IMAGEDL_SOURCES 中的 key，默认 BingImageClient
-        limit:  选填，下载张数，1-30，默认 6
-    """
-    data = request.get_json(silent=True) or {}
-    keyword = (data.get('keyword') or '').strip()
-    source = (data.get('source') or 'BingImageClient').strip()
+def _owner():
+    """P1 单租户：owner_id 先记录、不过滤（多租户在 P3 打开过滤）。"""
     try:
-        limit = max(1, min(30, int(data.get('limit') or 6)))
-    except (TypeError, ValueError):
-        limit = 6
-
-    if not keyword:
-        return jsonify({'success': False, 'error': '关键词不能为空'}), 400
-    if source not in IMAGEDL_SOURCES:
-        return jsonify({
-            'success': False,
-            'error': '不支持的 source: {}'.format(source),
-            'available': list(IMAGEDL_SOURCES.keys()),
-        }), 400
-
-    # 懒加载 imagedl（避免没装时启动失败）
-    try:
-        from imagedl import imagedl as _imagedl
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': 'imagedl 未安装或导入失败: {}'.format(e),
-            'hint': 'Dockerfile 已配 pip install pyimagedl，需 rebuild web 镜像',
-        }), 500
-
-    # 落盘目录：static/test-materials/（Flask 默认 static 路由可直接访问）
-    import uuid as _uuid
-    import time as _time
-    from datetime import datetime
-    safe_kw = re.sub(r'[^\w\u4e00-\u9fa5\-]', '_', keyword)[:30] or 'kw'
-    sub = '{}_{}'.format(safe_kw, datetime.now().strftime('%H%M%S'))
-    out_dir = os.path.join(os.getcwd(), 'static', 'test-materials', sub)
-    os.makedirs(out_dir, exist_ok=True)
-
-    started = _time.time()
-    try:
-        client = _imagedl.ImageClient(
-            image_sources=[source],
-            init_image_clients_cfg={source: {'work_dir': out_dir, 'max_retries': 2}},
-        )
-        # 搜 + 下载一气呵成（search_limits_per_source 是 search() 的参数）
-        search_results = client.search(keyword=keyword, search_limits_per_source=limit)
-        downloaded = client.download(image_infos=search_results)
-    except Exception as e:
-        logger.error('[imagedl] 搜索/下载失败: {}'.format(e))
-        return jsonify({'success': False, 'error': 'imagedl 执行失败: {}'.format(e)}), 500
-
-    # 收集下载结果（ImageInfo 列表）
-    items = []
-    if downloaded:
-        try:
-            # downloaded 可能是 list[ImageInfo] 或 dict{source: list}
-            flat = downloaded if isinstance(downloaded, list) else []
-            if not flat and isinstance(downloaded, dict):
-                for v in downloaded.values():
-                    if isinstance(v, list):
-                        flat.extend(v)
-            for it in flat[:limit]:
-                # ImageInfo 真实字段：save_path / save_name / download_url / description
-                sname = getattr(it, 'save_name', None) or ''
-                spath = getattr(it, 'save_path', None) or ''
-                if spath and not os.path.isabs(spath):
-                    spath = os.path.join(getattr(it, 'work_dir', out_dir) or out_dir, sname)
-                if not spath or not os.path.exists(spath):
-                    continue
-                # 相对 web 路径
-                rel = os.path.relpath(spath, os.getcwd()).replace('\\', '/')
-                if not rel.startswith('static/'):
-                    continue
-                items.append({
-                    'web_path': '/' + rel,
-                    'filename': sname or os.path.basename(spath),
-                    'source': getattr(it, 'source', source) or source,
-                    'caption': getattr(it, 'description', None) or '',
-                    'download_url': getattr(it, 'download_url', None) or '',
-                    'size': os.path.getsize(spath) if os.path.exists(spath) else 0,
-                })
-        except Exception as e:
-            logger.warning('[imagedl] 解析下载结果失败: {}'.format(e))
-
-    elapsed = round(_time.time() - started, 2)
-    return jsonify({
-        'success': True,
-        'keyword': keyword,
-        'source': source,
-        'source_cn': IMAGEDL_SOURCES.get(source, source),
-        'limit': limit,
-        'count': len(items),
-        'elapsed_s': elapsed,
-        'items': items,
-    })
-
-
-@bp.route('/api/aiclip/test-policyprint', methods=['POST'])
-def api_aiclip_test_policyprint():
-    """从 gov.cn 政策首页抓取政策文件（详情页 HTML → 正文 txt），返回本地可访问文件。
-
-    这是 PolicyPrint 的轻量替代：绕开 Selenium/Edge/code-sign 三座大山，
-    直接 requests 抓 gov.cn 政策列表页（服务端渲染）+ 详情页正文。
-
-    Body JSON:
-        keyword: 选填，标题关键词过滤（为空则不过滤，抓最新）
-        limit:  选填，下载条数，1-20，默认 5
-    """
-    data = request.get_json(silent=True) or {}
-    keyword = (data.get('keyword') or '').strip()
-    try:
-        limit = max(1, min(20, int(data.get('limit') or 5)))
-    except (TypeError, ValueError):
-        limit = 5
-
-    import time as _time
-    from datetime import datetime
-
-    safe_kw = re.sub(r'[^\w\u4e00-\u9fa5\-]', '_', keyword)[:30] or 'latest'
-    sub = 'pp_{}_{}'.format(safe_kw, datetime.now().strftime('%H%M%S'))
-    out_dir = os.path.join(os.getcwd(), 'static', 'policy-docs', sub)
-    os.makedirs(out_dir, exist_ok=True)
-
-    started = _time.time()
-    HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                      '(KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-    }
-
-    # 1. 抓政策列表页（服务端渲染，无需浏览器）
-    list_url = 'https://www.gov.cn/zhengce/'
-    try:
-        resp = requests.get(list_url, headers=HEADERS, timeout=20)
-        resp.encoding = 'utf-8'
-        list_html = resp.text
-    except Exception as e:
-        logger.error('[policyprint] 抓列表页失败: {}'.format(e))
-        return jsonify({'success': False, 'error': '抓取政策列表失败: {}'.format(e)}), 500
-
-    # 2. 提取 content_xxx.htm 链接（处理相对路径 + 去重）
-    seen = set()
-    links = []
-    for m in re.finditer(r'href="([^"]*content_\d+\.htm)"', list_html):
-        href = m.group(1)
-        if href.startswith('./'):
-            href = 'https://www.gov.cn/zhengce/' + href[2:]
-        elif href.startswith('/'):
-            href = 'https://www.gov.cn' + href
-        elif not href.startswith('http'):
-            continue
-        if href in seen:
-            continue
-        seen.add(href)
-        links.append(href)
-
-    # 3. 逐条抓详情页 → 标题 + 正文 → 保存 txt
-    items = []
-    for url in links:
-        if len(items) >= limit:
-            break
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=15)
-            r.encoding = 'utf-8'
-            detail = r.text
-        except Exception:
-            continue
-
-        # 标题（去 _xxx_中国政府网 后缀）
-        title = ''
-        tm = re.search(r'<title>([^<]*)</title>', detail)
-        if tm:
-            title = re.sub(r'_[^_]*_中国政府网$', '', tm.group(1).strip())
-        if not title:
-            continue
-        if keyword and keyword not in title:
-            continue
-
-        # 正文（pages_content 容器）
-        body = ''
-        bm = re.search(r'class="[^"]*pages_content[^"]*"[^>]*>(.*?)</div>', detail, re.S)
-        if bm:
-            body = re.sub(r'<[^>]+>', '', bm.group(1))
-            body = body.replace('&nbsp;', ' ').replace('&amp;', '&')
-            body = re.sub(r'[ \t]+', ' ', body)
-            body = re.sub(r'\n\s*\n+', '\n', body).strip()
-        if not body:
-            continue
-
-        # 保存为 txt
-        safe_title = re.sub(r'[\\/*?:"<>|\n\r\t]', '_', title).strip()[:50] or 'doc'
-        fname = '{}.txt'.format(safe_title)
-        fpath = os.path.join(out_dir, fname)
-        # 同名去重（标题可能重复）
-        if os.path.exists(fpath):
-            fname = '{}_{}.txt'.format(safe_title, datetime.now().strftime('%H%M%S%f'))
-            fpath = os.path.join(out_dir, fname)
-        try:
-            with open(fpath, 'w', encoding='utf-8') as f:
-                f.write('标题：{}\n来源：{}\n\n{}'.format(title, url, body))
-        except Exception as e:
-            logger.warning('[policyprint] 写文件失败 {}: {}'.format(fname, e))
-            continue
-
-        rel = os.path.relpath(fpath, os.getcwd()).replace('\\', '/')
-        items.append({
-            'title': title,
-            'source_url': url,
-            'web_path': '/' + rel,
-            'filename': fname,
-            'size': os.path.getsize(fpath),
-            'preview': body[:120],
-        })
-
-    elapsed = round(_time.time() - started, 2)
-    return jsonify({
-        'success': True,
-        'keyword': keyword,
-        'limit': limit,
-        'total_links': len(links),
-        'count': len(items),
-        'elapsed_s': elapsed,
-        'items': items,
-    })
-
-
-# =========================================================================
-# 文本 → 图片素材（Materialize）：政策文档 txt → 竖屏卡片图 jpg/png
-# =========================================================================
-
-_CJK_FONT_CANDIDATES = [
-    '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',      # Debian fonts-wqy-zenhei（容器已装）
-    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-    '/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf',
-    '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
-    'C:/Windows/Fonts/msyh.ttc',                          # Windows 本地开发
-    'C:/Windows/Fonts/simhei.ttf',
-]
-
-# 卡片配色：dark(抖音深色大字卡) / news(政务红) / light(浅色商务)
-MATERIALIZE_STYLES = {
-    'dark': {
-        'bg_top': (15, 23, 42), 'bg_bottom': (30, 41, 59),
-        'accent': (56, 189, 248), 'title': (241, 245, 249),
-        'body': (203, 213, 225), 'muted': (148, 163, 184),
-        'tag_bg': (56, 189, 248), 'tag_fg': (15, 23, 42),
-    },
-    'news': {
-        'bg_top': (127, 29, 29), 'bg_bottom': (185, 28, 28),
-        'accent': (253, 230, 138), 'title': (255, 255, 255),
-        'body': (254, 226, 226), 'muted': (252, 165, 165),
-        'tag_bg': (253, 230, 138), 'tag_fg': (127, 29, 29),
-    },
-    'light': {
-        'bg_top': (248, 250, 252), 'bg_bottom': (226, 232, 240),
-        'accent': (37, 99, 235), 'title': (15, 23, 42),
-        'body': (51, 65, 85), 'muted': (100, 116, 139),
-        'tag_bg': (37, 99, 235), 'tag_fg': (255, 255, 255),
-    },
-}
-
-
-def _find_cjk_font():
-    """返回第一个存在的中文字体路径；找不到返回 None。"""
-    for p in _CJK_FONT_CANDIDATES:
-        if os.path.isfile(p):
-            return p
-    return None
-
-
-def _gradient_bg(width, height, c1, c2):
-    """竖向上渐变背景（c1 顶部 → c2 底部）。"""
-    from PIL import Image, ImageDraw
-    img = Image.new('RGB', (width, height))
-    d = ImageDraw.Draw(img)
-    denom = max(1, height - 1)
-    for y in range(height):
-        t = y / denom
-        r = int(c1[0] + (c2[0] - c1[0]) * t)
-        g = int(c1[1] + (c2[1] - c1[1]) * t)
-        b = int(c1[2] + (c2[2] - c1[2]) * t)
-        d.line((0, y, width, y), fill=(r, g, b))
-    return img
-
-
-def _wrap_text(draw, text, font, max_width):
-    """按字符累积测量宽度，自动换行（中文逐字、英文/数字连排）。"""
-    lines = []
-    for raw_line in (text or '').split('\n'):
-        line = ''
-        for ch in raw_line:
-            test = line + ch
-            if draw.textlength(test, font=font) <= max_width or not line:
-                line = test
-            else:
-                lines.append(line)
-                line = ch
-        if line:
-            lines.append(line)
-    return lines
-
-
-def _split_segments(text, max_chars):
-    """把长文本按句子边界切段，每段不超过 max_chars 字。"""
-    text = re.sub(r'[ \t]+', ' ', text or '')
-    text = re.sub(r'\n\s*\n+', '\n', text).strip()
-    sentences = re.split(r'(?<=[。！？!?；;])', text)
-    segments = []
-    cur = ''
-    for s in sentences:
-        s = s.strip()
-        if not s:
-            continue
-        if len(cur) + len(s) <= max_chars:
-            cur += s
-        else:
-            if cur:
-                segments.append(cur)
-            while len(s) > max_chars:
-                segments.append(s[:max_chars])
-                s = s[max_chars:]
-            cur = s
-    if cur:
-        segments.append(cur)
-    return segments or [text[:max_chars]]
-
-
-def _render_material_card(seg_text, idx, total, title, tag, style, width, height, font_path):
-    """渲染单张竖屏卡片图，返回 PIL Image（RGB）。"""
-    from PIL import Image, ImageDraw, ImageFont
-    cfg = MATERIALIZE_STYLES.get(style, MATERIALIZE_STYLES['dark'])
-    img = _gradient_bg(width, height, cfg['bg_top'], cfg['bg_bottom'])
-    draw = ImageDraw.Draw(img)
-
-    margin = int(width * 0.09)
-    content_w = width - 2 * margin
-
-    # ---- 顶部标签胶囊 ----
-    tag_text = (tag or '政策解读').strip() or '政策解读'
-    tag_font = ImageFont.truetype(font_path, int(height * 0.026))
-    tag_w = int(draw.textlength(tag_text, font=tag_font))
-    tag_pad_x = int(height * 0.012)
-    tag_h = int(height * 0.048)
-    tag_box = (margin, margin, margin + tag_w + 2 * tag_pad_x, margin + tag_h)
-    draw.rounded_rectangle(tag_box, radius=int(height * 0.024), fill=cfg['tag_bg'])
-    draw.text((margin + tag_pad_x, margin + int(height * 0.008)),
-              tag_text, font=tag_font, fill=cfg['tag_fg'])
-
-    y = tag_box[3] + int(height * 0.028)
-
-    # ---- 主标题（最多 2 行，超出省略） ----
-    title_font = ImageFont.truetype(font_path, int(height * 0.042))
-    title_line_h = int(height * 0.058)
-    title_lines = _wrap_text(draw, (title or '').strip(), title_font, content_w)
-    if len(title_lines) > 2:
-        title_lines = title_lines[:2]
-        title_lines[-1] = title_lines[-1].rstrip() + '…'
-    for tl in title_lines:
-        draw.text((margin, y), tl, font=title_font, fill=cfg['title'])
-        y += title_line_h
-
-    # 标题下装饰线
-    y += int(height * 0.012)
-    draw.line((margin, y, margin + int(width * 0.26), y), fill=cfg['accent'], width=int(height * 0.005))
-    y += int(height * 0.036)
-
-    # ---- 正文（自动换行 + 垂直居中，底部防溢出截断） ----
-    body_font = ImageFont.truetype(font_path, int(height * 0.026))
-    body_line_h = int(height * 0.05)
-    body_lines = _wrap_text(draw, seg_text, body_font, content_w)
-    bottom_limit = height - int(height * 0.12)
-    body_top = y
-    avail = bottom_limit - body_top
-    body_h = len(body_lines) * body_line_h
-    # 短文本时正文垂直居中，避免标题下方大片空白
-    y = body_top + int(max(0, (avail - body_h) / 2))
-    for bl in body_lines:
-        if y + body_line_h > bottom_limit:
-            break
-        draw.text((margin, y), bl, font=body_font, fill=cfg['body'])
-        y += body_line_h
-
-    # ---- 底部页码 + 主色底条 ----
-    foot_font = ImageFont.truetype(font_path, int(height * 0.02))
-    foot_text = '{}/{}'.format(idx, total)
-    fw = int(draw.textlength(foot_text, font=foot_font))
-    draw.text((width - margin - fw, height - int(height * 0.07)),
-              foot_text, font=foot_font, fill=cfg['muted'])
-    draw.rectangle((0, height - int(height * 0.012), width, height), fill=cfg['accent'])
-
-    return img
-
-
-@bp.route('/api/aiclip/materialize', methods=['POST'])
-def api_aiclip_materialize():
-    """把文本（政策文档等）渲染成视频剪辑可用的图片素材（jpg/png 竖屏卡片）。
-
-    Body JSON:
-        text:      选填，直接给文本内容
-        file_path: 选填，容器内 txt 绝对路径 或 /static/... 开头的 web 路径（两者二选一，file_path 优先）
-        title:     选填，卡片主标题（缺省从文本首句提取）
-        tag:       选填，顶部小标签，默认「政策解读」
-        style:     选填，dark / news / light，默认 dark
-        width/height: 选填，默认 1080 x 1920（抖音竖屏）
-        format:    选填，png / jpg，默认 png
-        max_chars: 选填，每张卡最多字数，默认 180
-        max_cards: 选填，最多生成张数，默认 12
-
-    响应: success + count + items[{web_path, filename, index, snippet}]
-    """
-    data = request.get_json(silent=True) or {}
-
-    text = (data.get('text') or '').strip()
-    src = (data.get('file_path') or '').strip()
-    if src:
-        if src.startswith('/static/'):
-            src = os.path.join(os.getcwd(), src.lstrip('/').replace('/', os.sep))
-        if os.path.isfile(src):
-            try:
-                with open(src, 'r', encoding='utf-8', errors='ignore') as f:
-                    text = f.read().strip()
-            except Exception as e:
-                return jsonify({'success': False, 'error': '读取文件失败: {}'.format(e)}), 400
-        else:
-            return jsonify({'success': False, 'error': '文件不存在: {}'.format(src)}), 400
-
-    if not text:
-        return jsonify({'success': False, 'error': '缺少文本内容（text 或 file_path）'}), 400
-
-    title = (data.get('title') or '').strip()
-    if not title:
-        title = re.split(r'[。！？!?；;\n]', text)[0].strip()[:24]
-    tag = (data.get('tag') or '').strip()
-    style = (data.get('style') or 'dark').strip()
-    if style not in MATERIALIZE_STYLES:
-        style = 'dark'
-    fmt = (data.get('format') or 'png').strip().lower()
-    if fmt not in ('png', 'jpg', 'jpeg'):
-        fmt = 'png'
-    try:
-        width = max(320, min(4096, int(data.get('width') or 1080)))
-        height = max(320, min(4096, int(data.get('height') or 1920)))
-        max_chars = max(40, min(2000, int(data.get('max_chars') or 180)))
-        max_cards = max(1, min(50, int(data.get('max_cards') or 12)))
-    except (TypeError, ValueError):
-        width, height, max_chars, max_cards = 1080, 1920, 180, 12
-
-    # 懒加载 Pillow（与 imagedl 同理）
-    try:
-        from PIL import Image  # noqa: F401
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': 'Pillow 未安装或导入失败: {}'.format(e),
-            'hint': 'requirements.txt 已含 pillow，需确认容器内已安装',
-        }), 500
-
-    font_path = _find_cjk_font()
-    if not font_path:
-        return jsonify({
-            'success': False,
-            'error': '容器内未找到中文字体',
-            'hint': 'Dockerfile 需 apt 安装 fonts-wqy-zenhei',
-        }), 500
-
-    import time as _time
-    from datetime import datetime
-
-    safe_title = re.sub(r'[^\w\u4e00-\u9fa5\-]', '_', title)[:20] or 'doc'
-    sub = 'mt_{}_{}'.format(safe_title, datetime.now().strftime('%H%M%S'))
-    out_dir = os.path.join(os.getcwd(), 'static', 'material', sub)
-    os.makedirs(out_dir, exist_ok=True)
-
-    segments = _split_segments(text, max_chars)[:max_cards]
-    total = len(segments)
-    started = _time.time()
-    items = []
-    ext = 'jpg' if fmt in ('jpg', 'jpeg') else 'png'
-    save_fmt = 'JPEG' if ext == 'jpg' else 'PNG'
-    for i, seg in enumerate(segments, start=1):
-        img = _render_material_card(seg, i, total, title, tag, style, width, height, font_path)
-        fname = 'card_{:03d}.{}'.format(i, ext)
-        fpath = os.path.join(out_dir, fname)
-        img.save(fpath, format=save_fmt, quality=95)
-        rel = os.path.relpath(fpath, os.getcwd()).replace('\\', '/')
-        items.append({
-            'web_path': '/' + rel,
-            'filename': fname,
-            'index': i,
-            'snippet': seg[:40],
-        })
-
-    elapsed = round(_time.time() - started, 2)
-    return jsonify({
-        'success': True,
-        'title': title,
-        'style': style,
-        'width': width,
-        'height': height,
-        'format': ext,
-        'count': len(items),
-        'elapsed_s': elapsed,
-        'items': items,
-    })
-
-
-@bp.route('/api/aiclip/upload', methods=['POST'])
-def api_aiclip_upload():
-    """上传视频：主存 web 容器本地（供多模态出方案），并尽力转发 MCP（供剪辑）。"""
-    f = request.files.get('file')
-    if not f:
-        return jsonify({'success': False, 'error': '未收到文件'})
-
-    import uuid as _uuid
-    try:
-        data_bytes = f.read()
-    except Exception as e:
-        return jsonify({'success': False, 'error': '读取文件失败: {}'.format(e)})
-
-    # 1. 存 web 容器本地（出方案多模态直接用这个路径）
-    upload_dir = os.path.join(os.getcwd(), 'datas', 'uploads')
-    os.makedirs(upload_dir, exist_ok=True)
-    safe_name = re.sub(r'[^\w.\-]', '_', f.filename or 'video')
-    local_name = '{}_{}'.format(_uuid.uuid4().hex[:8], safe_name)
-    local_path = os.path.join(upload_dir, local_name)
-    with open(local_path, 'wb') as out:
-        out.write(data_bytes)
-
-    result = {
-        'success': True,
-        'path': local_path,          # web 容器内路径 → 出方案用
-        'filename': local_name,
-        'size': len(data_bytes),
-    }
-
-    # 2. 尽力转发 MCP（保留剪辑能力；失败不阻塞出方案）
-    try:
-        files = {'file': (f.filename, data_bytes, f.content_type or 'application/octet-stream')}
-        r = requests.post(MCP_BASE + '/upload', files=files, timeout=60)
-        mcp_json = r.json()
-        if mcp_json.get('path'):
-            result['mcp_path'] = mcp_json['path']
-    except Exception as e:
-        logger.warning('转发 MCP 上传失败（不影响出方案）: {}'.format(e))
-
-    return jsonify(result)
-
-
-@bp.route('/api/aiclip/clip', methods=['POST'])
-def api_aiclip_clip():
-    """调用 smart_clip 工具执行智能剪辑。"""
-    data = request.get_json(silent=True) or {}
-    video_input = (data.get('video_input') or '').strip()
-    if not video_input:
-        return jsonify({'success': False, 'error': '请先上传视频或填写视频路径/URL'})
-
-    arguments = {
-        'video_input': video_input,
-        'intent': (data.get('intent') or '提取精彩片段').strip() or '提取精彩片段',
-        'clip_count': int(data.get('clip_count') or 5),
-        'clip_duration_min': int(data.get('clip_duration_min') or 15),
-        'clip_duration_max': int(data.get('clip_duration_max') or 90),
-        'platform': (data.get('platform') or 'original').strip() or 'original',
-        'with_subtitles': bool(data.get('with_subtitles', True)),
-        'with_bgm': bool(data.get('with_bgm', False)),
-        'output_dir': './smart-clip-output',
-    }
-
-    try:
-        resp = _mcp_call('smart_clip', arguments)
-    except Exception as e:
-        logger.error('调用 Smart-Clip 失败: {}'.format(e))
-        return jsonify({'success': False, 'error': str(e)})
-
-    if resp.get('error'):
-        return jsonify({'success': False, 'error': str(resp.get('error'))})
-
-    result = resp.get('result') or {}
-    content = result.get('content') or []
-    text = ''
-    for c in content:
-        if c.get('type') == 'text':
-            text += c.get('text', '')
-    try:
-        payload = json.loads(text) if text else result
+        return session.get('user_id')
     except Exception:
-        payload = {'raw': text or result}
-
-    return jsonify({'success': True, 'data': payload})
+        return None
 
 
-# =========================================================================
-# V2.0 — VideoPlan 完整剪辑方案
-# =========================================================================
-
-import uuid
-from datetime import datetime, timezone, timedelta
-from services import storage_mysql
-
-_TZ_CN = timezone(timedelta(hours=8))
+def _ok(data=None, **extra):
+    body = {'success': True}
+    if data is not None:
+        body['data'] = data
+    body.update(extra)
+    return jsonify(body)
 
 
-def _now_iso() -> str:
-    return datetime.now(_TZ_CN).strftime('%Y-%m-%d %H:%M:%S')
+def _err(msg, code=200):
+    return jsonify({'success': False, 'error': msg}), code
 
 
-@bp.route('/api/aiclip/plan', methods=['POST'])
-def api_aiclip_plan():
-    """生成 V2.0 完整 VideoPlan(剪辑方案),并落库到 ai_clip_video_plans 表。
+def _body():
+    return request.get_json(silent=True) or {}
 
-    请求 JSON:
-        video_path (str, 必填):视频文件路径(容器内可访问)
-        intent (str, 可选):剪辑意图,默认 "提取精彩片段"
-        clip_count (int, 可选):期望片段数,默认 5
-        clip_duration_min/max (int, 可选):单片段时长范围,默认 15-90
-        style (str, 可选):Style 名(knowledge/entertainment/news/vlog/cute/luxury_bilingual_white/custom),None 自动选
-        custom_style_config (dict, 可选):custom 模式的覆盖配置
-        owner_id (str, 可选):归属用户,默认 None
-        source_video_id (str, 可选):关联 source_video,默认 None
-        persist (bool, 可选):是否落库,默认 True
 
-    响应:
-        success: True/False
-        video_plan_id:落库后返回的 plan id(主键 UUID)
-        video_plan:完整 VideoPlan JSON(SOP §3.1 三层结构 + Style)
-    """
-    data = request.get_json(silent=True) or {}
-    video_path = (data.get('video_path') or '').strip()
-    if not video_path:
-        return jsonify({'success': False, 'error': '缺少 video_path'}), 400
-
-    args = {
-        'video_path': video_path,
-        'intent': data.get('intent', '提取精彩片段'),
-        'clip_count': int(data.get('clip_count') or 5),
-        'clip_duration_min': int(data.get('clip_duration_min') or 15),
-        'clip_duration_max': int(data.get('clip_duration_max') or 90),
-    }
-    if data.get('style'):
-        args['style'] = data['style']
-    if data.get('custom_style_config'):
-        import json as _json
-        args['custom_style_config'] = _json.dumps(data['custom_style_config'], ensure_ascii=False)
-
-    # 直接调多模态模型出方案（input_video → doubao-seed 多模态，不走 whisper / MCP）
-    from services import video_plan as video_plan_service
-    try:
-        result = video_plan_service.generate_video_plan_sync(
-            video_path=video_path,
-            intent=args['intent'],
-            clip_count=args['clip_count'],
-            clip_duration_min=args['clip_duration_min'],
-            clip_duration_max=args['clip_duration_max'],
-        )
-    except Exception as e:
-        logger.error('生成剪辑方案失败: {}'.format(e))
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-    if not result.get('success'):
-        return jsonify({'success': False, 'error': result.get('error')})
-
-    video_plan = result.get('video_plan', {})
-
-    # 落库
-    persist = bool(data.get('persist', True))
-    video_plan_id = None
-    if persist:
-        try:
-            video_plan_id = _save_video_plan(
-                video_plan=video_plan,
-                source_video_id=data.get('source_video_id'),
-                owner_id=data.get('owner_id'),
-            )
-        except Exception as e:
-            logger.error('VideoPlan 落库失败: {}'.format(e))
-            return jsonify({
-                'success': True,
-                'persist': False,
-                'persist_error': str(e),
-                'video_plan': video_plan,
-            })
-
-    return jsonify({
-        'success': True,
-        'video_plan_id': video_plan_id,
-        'video_plan': video_plan,
+# ---------------------------------------------------------------------------
+# 自检
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/health', methods=['GET'])
+def api_health():
+    import shutil as _sh
+    return _ok({
+        'store_root': paths.store_root(),
+        'store_writable': os.access(paths.store_root(), os.W_OK)
+        if os.path.isdir(paths.store_root()) else False,
+        'inbox_root': paths.inbox_root(),
+        'inbox_exists': os.path.isdir(paths.inbox_root()),
+        'ffmpeg': bool(_sh.which(probe.FFMPEG)),
+        'ffprobe': bool(_sh.which(probe.FFPROBE)),
+        'pillow': probe.Image is not None,
+        **store.health(),
     })
 
 
-@bp.route('/api/aiclip/plan/<plan_id>', methods=['GET'])
-def api_aiclip_plan_get(plan_id: str):
-    """根据 video_plan_id 拉取已落库的 VideoPlan。"""
+# ---------------------------------------------------------------------------
+# 项目
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/projects', methods=['GET'])
+def api_project_list():
+    rows = projects.list_projects()
+    return _ok([_project_brief(r) for r in rows],
+               steps_schema=[{k: s[k] for k in ('key', 'name', 'hint', 'ready')}
+                             for s in projects.STEPS],
+               kinds=[{'value': 'storyboard', 'label': '分镜型',
+                       'desc': '无主轨，A-roll 素材段即主轨'},
+                      {'value': 'oral', 'label': '口播型',
+                       'desc': '主轨口播成片零删减直通，有贴片层与柔化窗'}])
+
+
+@bp.route('/api/aiclip/projects', methods=['POST'])
+def api_project_create():
+    b = _body()
     try:
-        row = storage_mysql.find_by_id('ai_clip_video_plans', plan_id)
+        row = projects.create(
+            name=b.get('name'),
+            kind=b.get('kind') or 'storyboard',
+            canvas=b.get('canvas'),
+            owner_id=_owner(),
+            created_by=(b.get('created_by') or 'web'),
+        )
+    except ValueError as e:
+        return _err(str(e))
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error('aiclip: 建项目失败 {}'.format(e))
+        return _err('建项目失败: {}'.format(e))
+    return _ok(_project_brief(row))
+
+
+@bp.route('/api/aiclip/projects/<pid>', methods=['GET'])
+def api_project_detail(pid):
+    row = projects.get_project(pid)
     if not row:
-        return jsonify({'success': False, 'error': 'plan_id 不存在'}), 404
-
-    # 反序列化 plan_json
-    try:
-        plan = json.loads(row.get('plan_json') or '{}')
-    except Exception:
-        plan = None
-    try:
-        style_snap = json.loads(row.get('style_snapshot') or '{}')
-    except Exception:
-        style_snap = None
-    try:
-        analyzer_meta = json.loads(row.get('analyzer_meta') or '{}')
-    except Exception:
-        analyzer_meta = None
-
-    return jsonify({
-        'success': True,
-        'id': row.get('id'),
-        'source_video_id': row.get('source_video_id'),
-        'style_id': row.get('style_id'),
-        'style_snapshot': style_snap,
-        'planner_model': row.get('planner_model'),
-        'status': row.get('status'),
-        'owner_id': row.get('owner_id'),
-        'created_at': row.get('created_at'),
-        'updated_at': row.get('updated_at'),
-        'video_plan': plan,
-        'analyzer_meta': analyzer_meta,
-    })
+        return _err('项目不存在')
+    data = _project_brief(row)
+    data['materials'] = [_material_brief(m) for m in mat.list_for_project(pid)]
+    return _ok(data)
 
 
-@bp.route('/api/aiclip/plan/list', methods=['GET'])
-def api_aiclip_plan_list():
-    """列出最近 N 条 VideoPlan(默认 20)。"""
+@bp.route('/api/aiclip/projects/<pid>', methods=['PATCH', 'POST'])
+def api_project_update(pid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    row = projects.update(pid, _body())
+    row = projects.recompute(pid) or row
+    return _ok(_project_brief(row))
+
+
+@bp.route('/api/aiclip/projects/<pid>', methods=['DELETE'])
+def api_project_delete(pid):
+    if not projects.archive(pid):
+        return _err('项目不存在')
+    return _ok({'id': pid})
+
+
+# ---------------------------------------------------------------------------
+# 项目素材
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/projects/<pid>/materials', methods=['GET'])
+def api_project_materials(pid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    return _ok([_material_brief(m) for m in mat.list_for_project(pid)])
+
+
+@bp.route('/api/aiclip/projects/<pid>/materials/upload', methods=['POST'])
+def api_project_upload(pid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    files = request.files.getlist('files') or request.files.getlist('file')
+    if not files:
+        return _err('没有收到文件')
+    owner = _owner()
+    added, deduped, failed = [], [], []
+    for f in files:
+        name = f.filename or ''
+        if not name:
+            continue
+        try:
+            data = f.read()
+        except Exception as e:
+            failed.append({'name': name, 'error': '读取失败: {}'.format(e)})
+            continue
+        row, created, err = mat.ingest_bytes(name, data, project_id=pid,
+                                             owner_id=owner, source='upload')
+        if err:
+            failed.append({'name': name, 'error': err})
+        elif created:
+            added.append(_material_brief(row))
+        else:
+            deduped.append(_material_brief(row))
+    projects.recompute(pid)
+    return _ok({'added': added, 'deduped': deduped, 'failed': failed,
+                'added_count': len(added), 'deduped_count': len(deduped),
+                'failed_count': len(failed)})
+
+
+@bp.route('/api/aiclip/projects/<pid>/materials/scan', methods=['POST'])
+def api_project_scan(pid):
+    """从素材箱导入。body: {"names": ["a.mp4", ...]} 或 {"all": true}。"""
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    b = _body()
+    files = mat.inbox_files()
+    if not b.get('all'):
+        want = set(b.get('names') or [])
+        if not want:
+            return _err('未选择文件')
+        files = [f for f in files if f['name'] in want]
+    if not files:
+        return _err('素材箱里没有可导入的文件')
+    owner = _owner()
+    added, deduped, failed = [], [], []
+    for f in files:
+        row, created, err = mat.ingest_path(
+            f['path'], project_id=pid, owner_id=owner,
+            source='inbox', move=bool(b.get('move')))
+        if err:
+            failed.append({'name': f['name'], 'error': err})
+        elif created:
+            added.append(_material_brief(row))
+        else:
+            deduped.append(_material_brief(row))
+    projects.recompute(pid)
+    return _ok({'added': added, 'deduped': deduped, 'failed': failed,
+                'added_count': len(added), 'deduped_count': len(deduped),
+                'failed_count': len(failed)})
+
+
+@bp.route('/api/aiclip/projects/<pid>/materials/link', methods=['POST'])
+def api_project_link(pid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    mid = (_body().get('material_id') or '').strip()
+    if not mid:
+        return _err('缺少 material_id')
+    if not mat.get(mid):
+        return _err('素材不存在')
+    mat.link(pid, mid, _owner())
+    projects.recompute(pid)
+    return _ok({'project_id': pid, 'material_id': mid})
+
+
+@bp.route('/api/aiclip/projects/<pid>/materials/<mid>', methods=['DELETE'])
+def api_project_unlink(pid, mid):
+    mat.unlink(pid, mid)
+    projects.recompute(pid)
+    return _ok({'project_id': pid, 'material_id': mid})
+
+
+# ---------------------------------------------------------------------------
+# 全库素材
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/materials', methods=['GET'])
+def api_material_library():
+    rows = mat.list_library()
+    return _ok([_material_brief(m) for m in rows])
+
+
+@bp.route('/api/aiclip/materials/<mid>', methods=['DELETE'])
+def api_material_delete(mid):
+    force = request.args.get('force') in ('1', 'true', 'yes')
+    ok, err = mat.remove(mid, force=force)
+    return _ok({'id': mid}) if ok else _err(err)
+
+
+@bp.route('/api/aiclip/materials/<mid>/reprobe', methods=['POST'])
+def api_material_reprobe(mid):
+    row, err = mat.reprobe(mid)
+    if err:
+        return _err(err)
+    return _ok(_material_brief(row))
+
+
+# ---------------------------------------------------------------------------
+# 素材理解（P2）：异步。长素材 2–3 分钟，HTTP 等不起，进度靠轮询素材列表
+# ---------------------------------------------------------------------------
+_und_lock = threading.Lock()
+_und_running = set()
+
+
+def _spawn_understand(mid, force=False):
+    """起一条后台理解线程。返回 (是否已起, 拒绝原因)。"""
+    row = store.fetch_by_id('materials', mid)
+    if not row:
+        return False, '素材不存在'
+    if row.get('classify_status') == 'running' and not force:
+        return False, '正在理解中'
+    with _und_lock:
+        if mid in _und_running:
+            return False, '正在理解中'
+        _und_running.add(mid)
+
+    def work():
+        try:
+            und.understand_material(mid, force=force)
+        except Exception as e:
+            logger.error('aiclip: 后台理解异常 {}: {}'.format(mid, e))
+        finally:
+            with _und_lock:
+                _und_running.discard(mid)
+
+    threading.Thread(target=work, daemon=True,
+                     name='und-{}'.format(mid[:8])).start()
+    return True, None
+
+
+@bp.route('/api/aiclip/materials/<mid>', methods=['GET'])
+def api_material_detail(mid):
+    row = mat.get(mid)
+    if not row:
+        return _err('素材不存在')
+    return _ok(_material_brief(row, full=True))
+
+
+@bp.route('/api/aiclip/materials/<mid>/understand', methods=['PATCH'])
+def api_material_understand_edit(mid):
+    """人工校对理解结果（PATCH，只改传进来的字段）。
+
+    body: {kind?, summary?, tags?, text_on_screen?, notes?,
+           speech_full_text?, units?: [{index, visual, speech, usable_for}]}
+
+    为什么需要：全模态模型转写会因同音词出错别字（"耳净"→"耳镜"），
+    而理解结果是 ② 参考脚本的唯一素材依据 —— 错字会一路带进成片字幕。
+    """
+    row, err = mat.update_understand(mid, _body(), editor=_owner())
+    if err:
+        return _err(err)
+    return _ok(_material_brief(row, full=True))
+
+
+@bp.route('/api/aiclip/materials/<mid>/understand', methods=['POST'])
+def api_material_understand(mid):
+    b = _body()
+    started, why = _spawn_understand(mid, force=bool(b.get('force')))
+    if not started:
+        return _err(why)
+    return _ok({'id': mid, 'status': 'running',
+                'ver': und.VER, 'model': und.ark.MODEL})
+
+
+@bp.route('/api/aiclip/projects/<pid>/materials/understand', methods=['POST'])
+def api_project_understand(pid):
+    """批量理解项目素材。
+
+    body: {ids?: [...], force?: bool}
+      · 不给 ids 就对全项目素材
+      · 默认跳过「已 done 且版本一致」的，所以按钮可以反复点而不重复烧钱
+    """
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    b = _body()
+    want = set(b.get('ids') or [])
+    force = bool(b.get('force'))
+    targets, skipped = [], 0
+    for m in mat.list_for_project(pid):
+        if want and m['id'] not in want:
+            continue
+        if (not force) and m.get('classify_status') == 'done' \
+                and m.get('understand_ver') == und.VER:
+            skipped += 1
+            continue
+        targets.append(m['id'])
+    # 长素材优先起（否则排在最后要等很久）
+    by_id = {m['id']: m for m in mat.list_for_project(pid)}
+    targets.sort(key=lambda i: -(by_id.get(i, {}).get('duration') or 0))
+    started, busy = [], []
+    for mid in targets:
+        ok, why = _spawn_understand(mid, force)
+        if ok:
+            started.append(mid)
+        else:
+            busy.append({'id': mid, 'why': why})
+    return _ok({
+        'started': len(started), 'busy': len(busy), 'skipped': skipped,
+        'total': len(targets), 'ver': und.VER, 'model': und.ark.MODEL,
+    }, started_ids=started, busy=busy)
+
+
+@bp.route('/api/aiclip/understand/status', methods=['GET'])
+def api_understand_status():
+    """全局理解队列自检（排查「按钮点了没反应」用）。"""
+    with _und_lock:
+        running = sorted(_und_running)
+    return _ok({'running': running, 'count': len(running),
+                'ver': und.VER, 'model': und.ark.MODEL,
+                'ark_available': und.ark.available()})
+
+
+# ---------------------------------------------------------------------------
+# 剧本导入（P3 · SOP ①）
+#   产物：frame_scripts(source='import') + frame_shots(N)。零 LLM。
+#   入口两种：上传 xlsx（主）/ 粘贴文本（备用）。
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/projects/<pid>/script', methods=['GET'])
+def api_script_get(pid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    row = sio.get_script(pid, 'import')
+    if not row:
+        return _ok(None)
+    # 剧本镜数有限（实测 10–12 镜），不像 246s 口播的 units 那样会爆体积，直接给全
+    return _ok(sio.script_brief(row, full=True))
+
+
+@bp.route('/api/aiclip/projects/<pid>/script', methods=['POST'])
+def api_script_import(pid):
+    """导入剧本。
+
+    multipart  file=<xlsx>                     主入口
+    json       {"text": "…"} / {"rows": [[…]]}  粘贴
+    json       {"requirement": "…"}             可同时带用户需求
+    """
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    shots, sheet, source_name = [], '', ''
+    b = _body()
+    requirement = (b.get('requirement') or '').strip()
+
+    f = request.files.get('file') or request.files.get('files')
+    if f is not None and (f.filename or '').strip():
+        source_name = f.filename.strip()
+        try:
+            data = f.read()
+        except Exception as e:
+            return _err('读取文件失败: {}'.format(e))
+        low = source_name.lower()
+        try:
+            if low.endswith(('.xlsx', '.xlsm')):
+                shots, sheet = sio.parse_xlsx(data)
+            elif low.endswith(('.csv', '.txt', '.md')):
+                shots = sio.parse_text(data.decode('utf-8-sig', 'ignore'))
+            else:
+                try:                       # 后缀不认识：先当 xlsx 试
+                    shots, sheet = sio.parse_xlsx(data)
+                except Exception:
+                    shots = sio.parse_text(data.decode('utf-8-sig', 'ignore'))
+        except Exception as e:
+            return _err('解析失败: {}'.format(e))
+    elif b.get('rows'):
+        try:
+            shots = sio.parse_rows(b['rows'])
+        except Exception as e:
+            return _err('解析失败: {}'.format(e))
+        source_name = (b.get('source_name') or 'pasted').strip()
+    elif (b.get('text') or '').strip():
+        try:
+            shots = sio.parse_text(b['text'])
+        except Exception as e:
+            return _err('解析失败: {}'.format(e))
+        source_name = (b.get('source_name') or 'pasted').strip()
+    else:
+        return _err('请上传剧本 xlsx，或粘贴剧本文本')
+
+    if not shots:
+        return _err('没有解析出任何镜')
+
     try:
-        limit = int(request.args.get('limit', 20))
-    except ValueError:
-        limit = 20
-    try:
-        rows = storage_mysql.load_all('ai_clip_video_plans') or []
+        row = sio.import_script(pid, shots, source_name=source_name,
+                                requirement=requirement, owner_id=_owner())
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-    rows.sort(key=lambda r: r.get('created_at') or '', reverse=True)
-    rows = rows[:limit]
-    return jsonify({
-        'success': True,
-        'count': len(rows),
-        'plans': [
-            {
-                'id': r.get('id'),
-                'status': r.get('status'),
-                'planner_model': r.get('planner_model'),
-                'created_at': r.get('created_at'),
-                'updated_at': r.get('updated_at'),
-                'summary': (json.loads(r.get('plan_json') or '{}').get('summary', '')
-                            if r.get('plan_json') else ''),
-            }
-            for r in rows
-        ],
-    })
+        logger.error('aiclip: 剧本导入失败 {}'.format(e))
+        return _err('导入失败: {}'.format(e))
+    projects.recompute(pid)
+    return _ok(sio.script_brief(row, full=True),
+               sheet=sheet, parsed=len(shots),
+               total_duration=row.get('total_duration'))
 
 
-def _save_video_plan(video_plan: dict, source_video_id: str | None = None,
-                     owner_id: str | None = None) -> str:
-    """落库 VideoPlan 到 ai_clip_video_plans,返回 plan_id。"""
-    plan_id = uuid.uuid4().hex
-    now = _now_iso()
-    style = video_plan.get('style', {}) or {}
-    style_snapshot = {
-        'name': style.get('name'),
-        'display_name': style.get('display_name'),
-        'description': style.get('description'),
-        'config': style.get('config', {}),
-        'is_system': style.get('is_system', True),
+@bp.route('/api/aiclip/projects/<pid>/requirement', methods=['POST'])
+def api_requirement_set(pid):
+    """只改用户需求（不动剧本）。需求挂在最新一版 import 脚本上。"""
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    row = sio.get_script(pid, 'import')
+    if not row:
+        return _err('还没有导入剧本')
+    req = (_body().get('requirement') or '').strip()
+    store.update('frame_scripts', row['id'], {'requirement': req or None})
+    return _ok({'id': row['id'], 'requirement': req})
+
+
+# ---------------------------------------------------------------------------
+# 参考脚本（P3 · SOP ② ，LLM 第 1 次 —— 叙事层）
+#   输入：剧本 × 素材理解 × 用户需求 —— 产出 reference.json + 人看版 md
+#   同样异步：一次调用实测 90–140s（11795 in / 6105 out tokens），HTTP 等不起。
+# ---------------------------------------------------------------------------
+_ref_lock = threading.Lock()
+_ref_running = set()
+
+
+def _spawn_reference(pid, requirement=None, owner_id=None):
+    """起一条后台生成线程。返回 (是否已起, 拒绝原因)。"""
+    with _ref_lock:
+        if pid in _ref_running:
+            return False, '正在生成中，请稍候'
+        _ref_running.add(pid)
+
+    def work():
+        try:
+            ref.generate(pid, requirement=requirement, owner_id=owner_id)
+        except Exception as e:
+            logger.error('aiclip: 后台生成参考脚本异常 {}: {}'.format(pid, e))
+        finally:
+            with _ref_lock:
+                _ref_running.discard(pid)
+
+    threading.Thread(target=work, daemon=True,
+                     name='ref-{}'.format(pid[:8])).start()
+    return True, None
+
+
+@bp.route('/api/aiclip/projects/<pid>/reference', methods=['GET'])
+def api_reference_get(pid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    full = request.args.get('full') in ('1', 'true', 'yes')
+    row = store.fetch(
+        'frame_scripts', "project_id=%s AND `source`='reference'", [pid],
+        order='version DESC', limit=1)
+    if not row:
+        return _ok(None, running=(pid in _ref_running), ver=ref.VER)
+    return _ok(ref.reference_brief(row[0], full=full),
+               running=(pid in _ref_running), ver=ref.VER, model=ref.ark.MODEL)
+
+
+@bp.route('/api/aiclip/projects/<pid>/reference', methods=['POST'])
+def api_reference_generate(pid):
+    """生成参考脚本（异步）。
+
+    body: {"requirement": "…", "force": true}
+      · 不传 requirement 就沿用剧本上已存的需求
+      · 生成中重复点会被拒（同一项目同时只跑一条）
+    """
+    project = projects.get_project(pid)
+    if not project:
+        return _err('项目不存在')
+    if not project.get('script_id'):
+        return _err('还没有导入剧本 —— 先做「剧本导入」这一步')
+    if not project.get('understood_count'):
+        return _err('还没有已理解的素材 —— 先去「素材理解」跑一遍')
+    b = _body()
+    req = b.get('requirement')
+    req = req.strip() if isinstance(req, str) else None
+    started, why = _spawn_reference(pid, requirement=req, owner_id=_owner())
+    if not started:
+        return _err(why)
+    return _ok({'project_id': pid, 'status': 'generating',
+                'ver': ref.VER, 'model': ref.ark.MODEL})
+
+
+@bp.route('/api/aiclip/projects/<pid>/reference.md', methods=['GET'])
+def api_reference_md(pid):
+    """人看版 md（?download=1 直接下载）。"""
+    row = store.fetch(
+        'frame_scripts', "project_id=%s AND `source`='reference'", [pid],
+        order='version DESC', limit=1)
+    if not row or not row[0].get('reference_md'):
+        return _err('还没有生成参考脚本', 404)
+    md = row[0]['reference_md']
+    if request.args.get('download') in ('1', 'true', 'yes'):
+        import io as _io
+        from flask import send_file as _sf
+        name = '{}-参考脚本.md'.format((projects.get_project(pid) or {}).get('name') or 'project')
+        return _sf(_io.BytesIO(md.encode('utf-8')), mimetype='text/markdown',
+                   as_attachment=True, download_name=name)
+    return bp.response_class(md, mimetype='text/markdown; charset=utf-8')
+
+
+# ---------------------------------------------------------------------------
+# TTS 语音（P5c）—— 参考脚本的台词 → 一镜一段旁白 → CosyVoice 合成
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/projects/<pid>/tts', methods=['GET'])
+def api_tts_list(pid):
+    """TTS 清单：逐镜台词（来自参考脚本）+ 生成状态 + 音色库。
+
+    台词是**读出来的**，不是让用户另写一份 —— 单一数据源留在参考脚本里，
+    否则参考脚本一改两边就对不上（「导出」这个动作因此是「对齐」，不是「复制」）。
+    """
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    return _ok(tl.preview(pid))
+
+
+@bp.route('/api/aiclip/projects/<pid>/tts/sync', methods=['POST'])
+def api_tts_sync(pid):
+    """「导出」：把参考脚本的每镜台词交接给 TTS 清单（幂等）。"""
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    row = tl.latest_reference(pid)
+    if not row:
+        return _err('还没有参考脚本 —— 先在「参考脚本生成」里跑一次')
+    if row.get('gen_status') != 'done':
+        return _err('参考脚本还在生成中，等它出结果再导出')
+    res = tl.sync(pid, owner_id=_owner())
+    if not res['total']:
+        return _err('参考脚本里没有可配音的台词（所有镜的 subtitle_text 都是空的）')
+    return _ok(tl.preview(pid), changed=res)
+
+
+@bp.route('/api/aiclip/projects/<pid>/tts/generate', methods=['POST'])
+def api_tts_generate_batch(pid):
+    """批量合成（异步，后台逐段串行）。body: {"all":true} 或 {"ids":[3,4,5]}"""
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    b = _body()
+    ids = b.get('ids') or []
+    if not isinstance(ids, list):
+        return _err('ids 必须是数组')
+    ok, why = tl.generate_batch(
+        pid, ids=ids, all_=bool(b.get('all')), voice=b.get('voice'),
+        rate=b.get('rate'), force=bool(b.get('force')))
+    if not ok:
+        return _err(why)
+    return _ok(tl.batch_state(pid))
+
+
+@bp.route('/api/aiclip/projects/<pid>/tts/<tid>/generate', methods=['POST'])
+def api_tts_generate_one(pid, tid):
+    """单段合成（同步，通常几秒 —— 前端直接转圈等结果）。"""
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    track = store.fetch_by_id('audio_tracks', tid)
+    if not track or track.get('project_id') != pid or track.get('kind') != tl.KIND:
+        return _err('音频段不存在')
+    b = _body()
+    try:
+        tl.generate_one(pid, track, voice=b.get('voice'), rate=b.get('rate'),
+                        force=bool(b.get('force')))
+    except Exception as e:
+        return _err(str(e))
+    return _ok(_tts_segment(store.fetch_by_id('audio_tracks', tid)))
+
+
+@bp.route('/api/aiclip/projects/<pid>/tts/<tid>', methods=['DELETE'])
+def api_tts_delete(pid, tid):
+    if not projects.get_project(pid):
+        return _err('项目不存在')
+    if not tl.remove(pid, tid):
+        return _err('音频段不存在')
+    return _ok(tl.preview(pid))
+
+
+@bp.route('/api/aiclip/tts/<tid>', methods=['GET'])
+def api_tts_file(tid):
+    """TTS 音频文件。`conditional=True` 支持 Range —— `<audio>` 拖进度条要用。"""
+    row = store.fetch_by_id('audio_tracks', tid)
+    if not row or row.get('kind') != tl.KIND:
+        return _err('音频不存在', 404)
+    fp = paths.tts_path(row.get('project_id'), tid)
+    if not os.path.isfile(fp):
+        return _err('音频文件不存在（点「生成」重新合成）', 404)
+    resp = send_file(fp, mimetype='audio/wav', conditional=True)
+    # 重新生成 = 覆盖同一路径，所以必须禁缓存，否则浏览器一直播旧音频
+    resp.headers['Cache-Control'] = 'no-store, must-revalidate'
+    if request.args.get('download') in ('1', 'true', 'yes'):
+        seq = row.get('shot_seq')
+        resp.headers['Content-Disposition'] = 'attachment; filename*=UTF-8\'\'{}'.format(
+            _quote('tts-{}.wav'.format(seq if seq is not None else str(tid)[:8])))
+    return resp
+
+
+def _tts_segment(track):
+    """单段出参（与 ttsline.preview 的 segments 元素同形，前端只维护一套渲染）。"""
+    return {
+        'seq': track.get('shot_seq'),
+        'shot_id': track.get('shot_id'),
+        'text': track.get('text_content'),
+        'chars': len(track.get('text_content') or ''),
+        'track_id': track.get('id'),
+        'status': track.get('status'),
+        'audio_url': track.get('url') if track.get('status') == tl.STATUS_DONE else None,
+        'audio_duration': float(track.get('duration') or 0),
+        'voice': track.get('voice_id'),
+        'rate': track.get('speech_rate'),
+        'gen_error': track.get('gen_error'),
+        'gen_at': track.get('gen_at'),
+        'synced': True,
     }
-    # style_id 暂未建样式主表,留空
-    style_id = None
 
-    record = {
-        'id': plan_id,
-        'source_video_id': source_video_id,
-        'style_id': style_id,
-        'style_snapshot': json.dumps(style_snapshot, ensure_ascii=False),
-        'plan_json': json.dumps(video_plan, ensure_ascii=False),
-        'analyzer_meta': json.dumps({
-            'source_video': video_plan.get('source_video'),
-            'schema_version': video_plan.get('schema_version'),
-            'generated_by': video_plan.get('generated_by'),
-        }, ensure_ascii=False),
-        'planner_model': video_plan.get('generated_by', ''),
-        'status': 'draft',
-        'owner_id': owner_id,
-        'created_at': now,
-        'updated_at': now,
+
+# ---------------------------------------------------------------------------
+# 素材箱
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/inbox', methods=['GET'])
+def api_inbox():
+    files = mat.inbox_files()
+    return _ok(files, root=paths.inbox_root(), exists=os.path.isdir(paths.inbox_root()))
+
+
+# ---------------------------------------------------------------------------
+# 文件服务（按 sha1 取，不暴露磁盘路径）
+# ---------------------------------------------------------------------------
+@bp.route('/api/aiclip/file/<sha1>', methods=['GET'])
+def api_file(sha1):
+    if not SHA1_RE.match(sha1 or ''):
+        return _err('非法 sha1')
+    fp = paths.find_asset(sha1)
+    if not fp or not os.path.isfile(fp):
+        return _err('文件不存在', 404)
+    ext = os.path.splitext(fp)[1].lower()
+    resp = send_file(fp, mimetype=MIME_FALLBACK.get(ext), conditional=True)
+    if request.args.get('download') in ('1', 'true', 'yes'):
+        row = store.query_one('SELECT original_name FROM `materials` WHERE sha1=%s', [sha1])
+        name = (row or {}).get('original_name') or os.path.basename(fp)
+        resp.headers['Content-Disposition'] = 'attachment; filename*=UTF-8\'\'{}'.format(
+            _quote(name))
+    return resp
+
+
+@bp.route('/api/aiclip/thumb/<sha1>', methods=['GET'])
+def api_thumb(sha1):
+    if not SHA1_RE.match(sha1 or ''):
+        return _err('非法 sha1')
+    tp = paths.thumb_path(sha1)
+    if not os.path.isfile(tp):
+        src = paths.find_asset(sha1)
+        if not src:
+            return _err('文件不存在', 404)
+        row = store.query_one('SELECT type FROM `materials` WHERE sha1=%s', [sha1])
+        kind = (row or {}).get('type') or paths.file_kind(src) or 'image'
+        if not probe.make_thumb(src, kind, tp):
+            return _err('缩略图生成失败', 404)
+    return send_file(tp, mimetype='image/jpeg', conditional=True)
+
+
+def _quote(name):
+    from urllib.parse import quote
+    return quote(name or 'material')
+
+
+# ---------------------------------------------------------------------------
+# 出参整形
+# ---------------------------------------------------------------------------
+def _project_brief(r):
+    return {
+        'id': r['id'],
+        'name': r.get('name') or '未命名',
+        'kind': r.get('kind') or 'storyboard',
+        'status': r.get('status') or 'draft',
+        'progress': r.get('progress') or 0,
+        'current_step': r.get('current_step'),
+        'block_reason': r.get('block_reason'),
+        'canvas': r.get('canvas'),
+        'material_count': r.get('material_count', 0),
+        'probed_count': r.get('probed_count', 0),
+        'understood_count': r.get('understood_count', 0),
+        'script_id': r.get('script_id'),
+        'script_count': r.get('script_count', 0),
+        'script_duration': r.get('script_duration') or 0,
+        'requirement': r.get('requirement'),
+        'reference_id': r.get('reference_id'),
+        'reference_status': r.get('reference_status'),
+        'reference_shots': r.get('reference_shots', 0),
+        # P5c：TTS 旁白（一镜一段，落在 audio_tracks kind='tts'）
+        'tts_count': r.get('tts_count', 0),
+        'tts_done': r.get('tts_done', 0),
+        'tts_failed': r.get('tts_failed', 0),
+        'steps': r.get('steps') or [],
+        'step_index': r.get('step_index', 0),
+        'created_at': r.get('created_at'),
+        'updated_at': r.get('updated_at'),
     }
-    storage_mysql.save_one('ai_clip_video_plans', record)
-    return plan_id
+
+
+def _material_brief(m, full=False):
+    """素材出参。
+
+    `full=False`（列表用）只给理解的**摘要**：246s 口播的 units 有 31 段、
+    转写全文几千字，列表里全带上会让一个项目详情接口变成几百 KB。
+    详情走 `GET /api/aiclip/materials/<mid>` 取 full。
+    """
+    geom = m.get('geom') or {}
+    media = m.get('media') or {}
+    tags = m.get('tags') or {}
+    sp = m.get('speech') or {}
+    units = m.get('seg_desc') or []
+    und_info = {
+        'status': m.get('classify_status') or 'pending',
+        'ver': m.get('understand_ver'),
+        'at': m.get('understand_at'),
+        'error': m.get('understand_error'),
+        'cost': m.get('understand_cost'),
+        'kind': m.get('ai_classify'),
+        'summary': tags.get('summary'),
+        'tags': tags.get('list') or [],
+        'text_on_screen': tags.get('text_on_screen'),
+        'notes': tags.get('notes'),
+        'modality': tags.get('modality'),
+        'unit_count': len(units),
+        'has_speech': bool(sp.get('has_speech')),
+        'speech_chars': len(sp.get('full_text') or ''),
+        # 人工校对标记：模型原文 vs 人改过的，前端要能一眼分清
+        'edited': bool(m.get('understand_edited_at')),
+        'edited_at': m.get('understand_edited_at'),
+    }
+    if full:
+        und_info['units'] = units
+        und_info['speech'] = sp
+    return {
+        'id': m['id'],
+        'sha1': m.get('sha1'),
+        'name': m.get('name') or m.get('original_name') or '',
+        'original_name': m.get('original_name'),
+        'type': m.get('type'),
+        'format': m.get('format'),
+        'file_size': m.get('file_size') or 0,
+        'duration': m.get('duration') or 0,
+        'resolution': m.get('resolution'),
+        'file_url': m.get('file_url'),
+        'thumb_url': m.get('thumb_url'),
+        'used_count': m.get('used_count') or 0,
+        'classify_status': m.get('classify_status') or 'pending',
+        'understand': und_info,
+        'geom': geom,
+        'media': media,
+        'content_ratio': geom.get('content_ratio'),
+        'bbox': geom.get('bbox'),
+        'bbox_px': geom.get('bbox_px'),
+        'has_alpha': geom.get('has_alpha'),
+        'fps': media.get('fps'),
+        'has_audio': media.get('has_audio'),
+        'probed': bool(geom or media),
+        'created_at': m.get('created_at'),
+    }
