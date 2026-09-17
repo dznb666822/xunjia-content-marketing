@@ -22,7 +22,6 @@ from smart_clip.tools.repurpose import repurpose_tool
 from smart_clip.tools.highlight_reel import highlight_reel_tool
 from smart_clip.tools.analyze_content import analyze_content_tool
 from smart_clip.tools.get_edit_plan import get_edit_plan_tool
-from smart_clip.tools.get_video_plan import get_video_plan_tool
 
 UPLOAD_DIR = os.getenv("SMART_CLIP_UPLOAD_DIR", os.path.join(os.getcwd(), "uploads"))
 OUTPUT_DIR = os.getenv("SMART_CLIP_OUTPUT_DIR", os.path.join(os.getcwd(), "smart-clip-output"))
@@ -45,7 +44,6 @@ mcp.tool(repurpose_tool)
 mcp.tool(highlight_reel_tool)
 mcp.tool(analyze_content_tool)
 mcp.tool(get_edit_plan_tool)
-mcp.tool(get_video_plan_tool)
 
 
 # ── HTTP endpoints for file transfer (SSE mode only) ──
