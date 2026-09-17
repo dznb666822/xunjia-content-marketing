@@ -35,7 +35,7 @@ import os
 import re
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from loguru import logger
 
@@ -54,9 +54,61 @@ STATUS_FAILED = 'failed'
 # 而且长了 TTS 也容易在语气上「念成一整段」而不是「一句一句说」。
 MAX_CHARS = 300
 
+# ★ generating 的陈旧阈值。单段合成实测只要 1~3 秒（火山 v3 流式），
+#   超过这个时长还挂在 generating，一定是**进程被中断了**
+#   （容器 restart / 后台批量线程被杀 / 连接挂死），不是"还在跑"。
+#
+#   为什么必须要这个：generating 是这套状态机里唯一的**非终态**，
+#   而进程被杀时没人会去把它改回来 → 这一行永远显示「合成中」，
+#   并且下面 generate_one 的「正在合成中」检查会**连手动重试都拒掉**，
+#   用户唯一的出路是手改数据库。容器重启是我们每天的常规动作，所以这条必然踩。
+STALE_GENERATING_SECONDS = 180
+
 
 def _now():
     return datetime.now().isoformat(timespec='seconds')
+
+
+def _stale_cutoff():
+    """generating 行的「太老了」分界线（ISO 字符串，与 updated_at 同格式可直接比大小）。"""
+    return (datetime.now() - timedelta(seconds=STALE_GENERATING_SECONDS)) \
+        .isoformat(timespec='seconds')
+
+
+def is_stale_generating(row):
+    """一行是不是「被中断后卡死」的 generating。"""
+    if not row or row.get('status') != STATUS_GENERATING:
+        return False
+    ts = row.get('updated_at')
+    if not ts:
+        return True                    # 时间都没有，宁可放行也不要永久卡死
+    try:
+        age = (datetime.now() - datetime.fromisoformat(str(ts))).total_seconds()
+    except (TypeError, ValueError):
+        return True
+    return age > STALE_GENERATING_SECONDS
+
+
+def reap_stale(pid):
+    """把卡死的 generating 行放回 pending —— 打开页面即自愈。
+
+    容器重启后必然产生这种行；不回收的话，它既不能重试、也永远不会自己好。
+    """
+    rows = store.fetch('audio_tracks',
+                       "project_id=%s AND kind=%s AND status=%s",
+                       [pid, KIND, STATUS_GENERATING])
+    n = 0
+    for r in rows:
+        if is_stale_generating(r):
+            store.update('audio_tracks', r['id'], {
+                'status': STATUS_PENDING,
+                'gen_error': '上次合成被中断（进程重启或任务中断），可重新生成',
+                'updated_at': _now(),
+            })
+            n += 1
+    if n:
+        logger.warning('aiclip TTS 回收 {} 个卡死的 generating 行 ({})'.format(n, pid))
+    return n
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +235,7 @@ def list_tracks(pid):
 
 def preview(pid):
     """清单 + 状态合并视图（GET /tts 的出参）。"""
+    reap_stale(pid)          # 打开页面即自愈：把上次被中断的「合成中」放回 pending
     plan = collect_lines(pid)
     tracks = list_tracks(pid)
     segs = []
@@ -379,10 +432,12 @@ def generate_one(pid, track, voice=None, rate=None, force=False):
     text = clean_text(track.get('text_content'))
     if not text:
         raise ValueError('这一段没有台词，无法合成')
-    if track.get('status') == STATUS_GENERATING:
-        raise RuntimeError('这一段正在合成中')
     if track.get('status') == STATUS_DONE and track.get('url') and not force:
         return track                     # 已经好了，别重复烧算力
+    # 入参可能是别处读来的快照，重新拿一次最新的再判
+    fresh = store.fetch_by_id('audio_tracks', tid) or track
+    if fresh.get('status') == STATUS_GENERATING and not is_stale_generating(fresh):
+        raise RuntimeError('这一段正在合成中')
 
     voice = (voice or '').strip() or track.get('voice_id') or tts_svc.default_voice()
     if not tts_svc.has_voice(voice):
@@ -394,8 +449,17 @@ def generate_one(pid, track, voice=None, rate=None, force=False):
     except (TypeError, ValueError):
         rate = tts_svc.default_rate()
 
-    store.update('audio_tracks', tid, {
-        'status': STATUS_GENERATING, 'gen_error': None, 'updated_at': _now()})
+    # ★ 抢占用「比较并交换」，不是先读后写：单段按钮与批量任务可能同时打同一段，
+    #   先读后写会两边都以为自己抢到了 → 同一句话被烧两遍、两个线程互相覆盖状态。
+    #   CAS 让只有一方推进，另一方立刻拿到「已有人在处理」。
+    #   条件里额外放行「陈旧的 generating」= 允许夺回被中断的行（见 STALE_GENERATING_SECONDS）。
+    got = store.execute(
+        'UPDATE `audio_tracks` SET `status`=%s, `gen_error`=NULL, `updated_at`=%s '
+        'WHERE `id`=%s AND (`status` IS NULL OR `status`<>%s '
+        'OR `updated_at` IS NULL OR `updated_at`<%s)',
+        [STATUS_GENERATING, _now(), tid, STATUS_GENERATING, _stale_cutoff()])
+    if not got:
+        raise RuntimeError('这一段正在合成中（已有任务在处理）')
     paths.ensure_tts_dir(pid)
     # 换 provider 会换扩展名 —— 先把旧扩展名的残留删掉，避免目录里堆两个「同一段」
     drop_file(pid, tid)
