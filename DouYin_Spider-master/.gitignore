@@ -37,3 +37,8 @@ datas
 
 # 本地环境变量（cookie 与登录凭证，勿入库）
 .env
+
+# TTS 自检产物与一次性验证脚本（本地跑完即弃，勿入库）
+# 形态：services/_tts_selftest.mp3（自检输出）、services/_tts_*.py（探针/端到端/回归）
+/services/_tts_selftest.mp3
+/services/_tts_*.py
