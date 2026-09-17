@@ -70,6 +70,8 @@ DouYin_Spider-master/static/policy-docs/
 DouYin_Spider-master/static/ai-clips/
 DouYin_Spider-master/static/screenshots/
 DouYin_Spider-master/debug/
+# 素材理解抽帧（<project_id>/first_frame.jpg，上传素材时按需生成）
+DouYin_Spider-master/static/analysis_frames/
 
 # ===== Remotion 渲染产物 =====
 remotion-demo/out/
